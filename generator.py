@@ -43,7 +43,8 @@ class Generator:
       # conv layer
       # Note: the paper said that ReLU and _norm were used
       # but actually tanh was used and no _norm here
-      output = ops.c7s1_k(u32, 3, norm=None,
+      # XXX: Try to do a residual thing :/
+      output = input + ops.c7s1_k(u32, 3, norm=None,
           activation='tanh', reuse=self.reuse, name='output')           # (?, w, h, 3)
     # set reuse=True for next call
     self.reuse = True
