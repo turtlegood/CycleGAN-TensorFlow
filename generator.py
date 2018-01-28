@@ -3,7 +3,13 @@ import ops
 import utils
 
 class Generator:
-  def __init__(self, name, is_training, ngf=64, norm='instance', full_image_size=128, g_image_size=128):
+  def __init__(self, name, is_training, 
+        ngf=64,
+        norm='instance',
+        full_image_size=128,
+        g_image_size=128,
+        eye_y=128
+        ):
     self.name = name
     self.reuse = False
     self.ngf = ngf
@@ -11,15 +17,47 @@ class Generator:
     self.is_training = is_training
     self.full_image_size = full_image_size
     self.g_image_size = g_image_size
+    self.eye_y = eye_y
 
   def __call__(self, input):
     # input: batch_size x full_image_size x full_image_size x 3
-    tf.summary.image('xxx1', input)
-    y_start, y_end = 70-24, 70+24
-    x_start, x_end = 80-48, 80
-    cropped = input[:, y_start:y_end, x_start:x_end, :]
-    tf.summary.image('xxx2', cropped)
-    return self.raw_call(cropped)
+    left_residual = self.one_eye_residual(input, 'left')
+    right_residual = self.one_eye_residual(input, 'right')
+    added_layer = input + left_residual + right_residual
+    output = tf.nn.tanh(added_layer)
+    return output
+
+  def one_eye_residual(self, input, eye_mode):
+    with tf.name_scope('eye' + eye_mode):
+      # find crop box
+      half_full_size = self.full_image_size // 2
+      half_g_size = self.g_image_size // 2
+      y_start, y_end = self.eye_y - half_g_size, self.eye_y + half_g_size
+      if eye_mode == 'left':
+        x_start, x_end = half_full_size - self.g_image_size, half_full_size
+      elif eye_mode == 'right':
+        x_start, x_end = half_full_size, half_full_size + self.g_image_size
+      else:
+        raise Exception('wrong eye_mode')
+      # print(y_start, y_end, x_start, x_end)
+      # crop
+      before_nn = input[:, y_start:y_end, x_start:x_end, :]
+      # maybe flip
+      if eye_mode == 'right':
+        before_nn = tf.reverse(before_nn, [2])
+      # call nn
+      after_nn = self.raw_call(before_nn)
+      # maybe flip
+      if eye_mode == 'right':
+        after_nn = tf.reverse(after_nn, [2])
+      # pad back
+      padded_residual = tf.pad(after_nn,
+          [[0,0], [y_start, self.full_image_size - y_end], [x_start, self.full_image_size - x_end], [0,0]], 'CONSTANT')
+      # logging
+      tf.summary.image('before', before_nn)
+      tf.summary.image('after', after_nn)
+      tf.summary.image('padded', padded_residual)
+      return padded_residual
 
   # XXX originally it is this __call__
   def raw_call(self, input):
@@ -56,8 +94,12 @@ class Generator:
       # Note: the paper said that ReLU and _norm were used
       # but actually tanh was used and no _norm here
       # XXX: Try to do a residual thing :/
-      output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
-          activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
+      # XXX: no residual here, because do it otherwhere
+      # output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
+      #     activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
+      output = ops.c7s1_k(u32, 3, norm=None,
+          activation=None, reuse=self.reuse, name='output')           # (?, w, h, 3)
+      # XXX: original
       # output = ops.c7s1_k(u32, 3, norm=None,
       #     activation='tanh', reuse=self.reuse, name='output')           # (?, w, h, 3)
     # set reuse=True for next call

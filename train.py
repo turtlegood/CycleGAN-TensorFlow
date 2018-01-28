@@ -11,6 +11,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_integer('full_image_size', 256, '')
 tf.flags.DEFINE_integer('g_image_size', 256, '')
+tf.flags.DEFINE_integer('eye_y', 128, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
                      'use lsgan (mean squared error) or cross entropy loss, default: True')
 tf.flags.DEFINE_string('norm', 'instance',
@@ -64,6 +65,7 @@ def train():
         Y_train_file=FLAGS.Y,
         batch_size=FLAGS.batch_size,
         full_image_size=FLAGS.full_image_size,
+        eye_y=FLAGS.eye_y,
         g_image_size=FLAGS.g_image_size,
         use_lsgan=FLAGS.use_lsgan,
         norm=FLAGS.norm,
@@ -104,8 +106,6 @@ def train():
       # fake_X_pool = ImagePool(FLAGS.pool_size)
 
       while not coord.should_stop():
-        print('training at step %d'%step)
-
         # get previously generated images
         # XXX
         # fake_y_val, fake_x_val = sess.run([fake_y, fake_x])

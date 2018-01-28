@@ -14,6 +14,7 @@ class CycleGAN:
                batch_size=1,
                full_image_size=256,
                g_image_size=256,
+               eye_y=128,
                use_lsgan=True,
                norm='instance',
                lambda1=10.0,
@@ -50,7 +51,7 @@ class CycleGAN:
 
     self.is_training = tf.placeholder_with_default(True, shape=[], name='is_training')
 
-    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, g_image_size=g_image_size)
+    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, g_image_size=g_image_size, full_image_size=full_image_size, eye_y=eye_y)
     self.D_Y = Discriminator('D_Y',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
       
@@ -95,7 +96,8 @@ class CycleGAN:
 
     # summary
     tf.summary.histogram('D_Y/true', self.D_Y(y))
-    tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
+    # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
+    tf.summary.histogram('D_Y/fake', self.D_Y(fake_y)) #XXX avoid G(x) multiple times
     # tf.summary.histogram('D_X/true', self.D_X(x))
     # tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
 
@@ -105,7 +107,8 @@ class CycleGAN:
     # tf.summary.scalar('loss/D_X', D_X_loss)
     # tf.summary.scalar('loss/cycle', cycle_loss)
 
-    tf.summary.image('X/generated', utils.batch_convert2int(self.G(x)))
+    # tf.summary.image('X/generated', utils.batch_convert2int(self.G(x)))
+    tf.summary.image('X/generated', utils.batch_convert2int(fake_y)) #XXX avoid G(x) multiple times
     # tf.summary.image('X/reconstruction', utils.batch_convert2int(self.F(self.G(x))))
     # tf.summary.image('Y/generated', utils.batch_convert2int(self.F(y)))
     # tf.summary.image('Y/reconstruction', utils.batch_convert2int(self.G(self.F(y))))
