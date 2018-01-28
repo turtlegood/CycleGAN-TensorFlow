@@ -91,17 +91,15 @@ def train():
         fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
 
         # train
-        train_feed_dict = {cycle_gan.fake_y: fake_Y_pool.query(fake_y_val),
-                          cycle_gan.fake_x: fake_X_pool.query(fake_x_val)}
-        _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val = (
+        _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val, summary = (
               sess.run(
-                  [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss],
-                  feed_dict=train_feed_dict
+                  [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss, summary_op],
+                  feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val),
+                             cycle_gan.fake_x: fake_X_pool.query(fake_x_val)}
               )
         )
 
-        if step % 50 == 0:
-          summary = sess.run([summary_op], feed_dict=train_feed_dict)
+        if step < 500 or step % 10 == 0:
           train_writer.add_summary(summary, step)
           train_writer.flush()
 
