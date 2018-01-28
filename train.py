@@ -71,8 +71,12 @@ def train():
         beta1=FLAGS.beta1,
         ngf=FLAGS.ngf
     )
-    G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x = cycle_gan.model()
-    optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
+
+    # XXX
+    # G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x = cycle_gan.model()
+    # optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
+    G_loss, D_Y_loss, fake_y = cycle_gan.model()
+    optimizers = cycle_gan.optimize(G_loss, D_Y_loss)
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
@@ -94,18 +98,29 @@ def train():
 
     try:
       fake_Y_pool = ImagePool(FLAGS.pool_size)
-      fake_X_pool = ImagePool(FLAGS.pool_size)
+      # XXX
+      # fake_X_pool = ImagePool(FLAGS.pool_size)
 
       while not coord.should_stop():
         # get previously generated images
-        fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
+        # XXX
+        # fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
+        # NOT: fake_y_val = sess.run([fake_y])
+        fake_y_val = sess.run(fake_y)
 
         # train
-        _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val, summary = (
+        # _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val, summary = (
+        #       sess.run(
+        #           [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss, summary_op],
+        #           feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val),
+        #                      cycle_gan.fake_x: fake_X_pool.query(fake_x_val)}
+        #       )
+        # )
+
+        _, G_loss_val, D_Y_loss_val, summary = (
               sess.run(
-                  [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss, summary_op],
-                  feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val),
-                             cycle_gan.fake_x: fake_X_pool.query(fake_x_val)}
+                  [optimizers, G_loss, D_Y_loss, summary_op],
+                  feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val)}
               )
         )
 
@@ -117,8 +132,9 @@ def train():
           logging.info('-----------Step %d:-------------' % step)
           logging.info('  G_loss   : {}'.format(G_loss_val))
           logging.info('  D_Y_loss : {}'.format(D_Y_loss_val))
-          logging.info('  F_loss   : {}'.format(F_loss_val))
-          logging.info('  D_X_loss : {}'.format(D_X_loss_val))
+          # XXX
+          # logging.info('  F_loss   : {}'.format(F_loss_val))
+          # logging.info('  D_X_loss : {}'.format(D_X_loss_val))
 
         if step % 10000 == 0:
           save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)

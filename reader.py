@@ -19,7 +19,7 @@ class Reader():
     self.reader = tf.TFRecordReader()
     self.name = name
 
-  def feed(self):
+  def feed(self, is_log=True):
     """
     Returns:
       images: 4D tensor [batch_size, image_width, image_height, image_depth]
@@ -45,7 +45,8 @@ class Reader():
             min_after_dequeue=self.min_queue_examples
           )
 
-      tf.summary.image('_input', images)
+      if is_log:
+        tf.summary.image('_input', images)
     return images
 
   def _preprocess(self, image):
