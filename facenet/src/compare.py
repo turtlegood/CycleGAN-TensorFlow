@@ -123,11 +123,6 @@ def load_and_align_data(image_paths, image_size, margin, gpu_memory_fraction):
         aligned = misc.imresize(cropped, (image_size, image_size), interp='bilinear')
         prewhitened = facenet.prewhiten(aligned)
         img_list.append(prewhitened)
-
-        # XXX
-        print('read', image)
-        print('save to', os.path.expanduser(image) + '.new.jpg')
-        misc.imsave(os.path.expanduser(image) + '.new.jpg',prewhitened)
     images = np.stack(img_list)
     return images
 

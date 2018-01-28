@@ -31,7 +31,8 @@ def data_reader(input_dir, shuffle=True):
   file_paths = []
 
   for img_file in scandir(input_dir):
-    if img_file.name.endswith('.jpg') and img_file.is_file():
+    # if img_file.name.endswith('.jpg') and img_file.is_file():
+    if img_file.name.endswith('.JPEG') and img_file.is_file():
       file_paths.append(img_file.path)
 
   if shuffle:

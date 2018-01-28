@@ -4,6 +4,7 @@ import utils
 from reader import Reader
 from discriminator import Discriminator
 from generator import Generator
+import facenet_loss
 
 REAL_LABEL = 0.9
 
@@ -11,6 +12,7 @@ class CycleGAN:
   def __init__(self,
                X_train_file='',
                Y_train_file='',
+               face_model_path='',
                batch_size=1,
                full_image_size=256,
                g_image_size=256,
@@ -42,6 +44,7 @@ class CycleGAN:
     self.use_lsgan = use_lsgan
     use_sigmoid = not use_lsgan
     self.batch_size = batch_size
+    self.face_model_path = face_model_path
     self.g_image_size = g_image_size
     self.full_image_size = full_image_size
     self.learning_rate = learning_rate
@@ -94,6 +97,9 @@ class CycleGAN:
     # F_loss = F_gan_loss + cycle_loss
     # D_X_loss = self.discriminator_loss(self.D_X, x, self.fake_x, use_lsgan=self.use_lsgan)
 
+    # face_loss
+    face_loss = facenet_loss.facenet_loss(x, fake_y, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
+
     # summary
     tf.summary.histogram('D_Y/true', self.D_Y(y))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
@@ -103,6 +109,7 @@ class CycleGAN:
 
     tf.summary.scalar('loss/G', G_gan_loss)
     tf.summary.scalar('loss/D_Y', D_Y_loss)
+    tf.summary.scalar('loss/face', face_loss)
     # tf.summary.scalar('loss/F', F_gan_loss)
     # tf.summary.scalar('loss/D_X', D_X_loss)
     # tf.summary.scalar('loss/cycle', cycle_loss)
@@ -115,10 +122,11 @@ class CycleGAN:
 
     # XXX
     # return G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x
-    return G_loss, D_Y_loss, fake_y
+    return G_loss, D_Y_loss, face_loss, fake_y
 
   # def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss):
-  def optimize(self, G_loss, D_Y_loss):
+  def optimize(self, G_loss, D_Y_loss, face_loss):
+    # TODO: face_loss
     def make_optimizer(loss, variables, name='Adam'):
       """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
           and a linearly decaying rate that goes to zero over the next 100k steps
@@ -149,12 +157,14 @@ class CycleGAN:
 
     G_optimizer = make_optimizer(G_loss, self.G.variables, name='Adam_G')
     D_Y_optimizer = make_optimizer(D_Y_loss, self.D_Y.variables, name='Adam_D_Y')
+    # XXX opt G
+    face_optimizer = make_optimizer(face_loss, self.G.variables, name='Adam_face')
     # XXX
     # F_optimizer =  make_optimizer(F_loss, self.F.variables, name='Adam_F')
     # D_X_optimizer = make_optimizer(D_X_loss, self.D_X.variables, name='Adam_D_X')
 
     # with tf.control_dependencies([G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer]):
-    with tf.control_dependencies([G_optimizer, D_Y_optimizer]):
+    with tf.control_dependencies([G_optimizer, D_Y_optimizer, face_optimizer]):
       return tf.no_op(name='optimizers')
 
   def discriminator_loss(self, D, y, fake_y, use_lsgan=True):

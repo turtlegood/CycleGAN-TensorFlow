@@ -9,6 +9,7 @@ from utils import ImagePool
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
+tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 256, '')
 tf.flags.DEFINE_integer('g_image_size', 256, '')
 tf.flags.DEFINE_integer('eye_y', 128, '')
@@ -63,6 +64,7 @@ def train():
     cycle_gan = CycleGAN(
         X_train_file=FLAGS.X,
         Y_train_file=FLAGS.Y,
+        face_model_path=FLAGS.face_model_path,
         batch_size=FLAGS.batch_size,
         full_image_size=FLAGS.full_image_size,
         eye_y=FLAGS.eye_y,
@@ -79,8 +81,8 @@ def train():
     # XXX
     # G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x = cycle_gan.model()
     # optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
-    G_loss, D_Y_loss, fake_y = cycle_gan.model()
-    optimizers = cycle_gan.optimize(G_loss, D_Y_loss)
+    G_loss, D_Y_loss, face_loss, fake_y = cycle_gan.model()
+    optimizers = cycle_gan.optimize(G_loss, D_Y_loss, face_loss)
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
@@ -121,9 +123,9 @@ def train():
         #       )
         # )
 
-        _, G_loss_val, D_Y_loss_val, summary = (
+        _, G_loss_val, D_Y_loss_val, face_loss_val, summary = (
               sess.run(
-                  [optimizers, G_loss, D_Y_loss, summary_op],
+                  [optimizers, G_loss, D_Y_loss, face_loss, summary_op],
                   feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val)}
               )
         )
@@ -134,8 +136,9 @@ def train():
 
         if step % 100 == 0:
           logging.info('-----------Step %d:-------------' % step)
-          logging.info('  G_loss   : {}'.format(G_loss_val))
-          logging.info('  D_Y_loss : {}'.format(D_Y_loss_val))
+          logging.info('  G_loss    : {}'.format(G_loss_val))
+          logging.info('  D_Y_loss  : {}'.format(D_Y_loss_val))
+          logging.info('  face_loss : {}'.format(face_loss_val))
           # XXX
           # logging.info('  F_loss   : {}'.format(F_loss_val))
           # logging.info('  D_X_loss : {}'.format(D_X_loss_val))

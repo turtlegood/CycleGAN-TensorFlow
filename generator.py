@@ -3,7 +3,7 @@ import ops
 import utils
 
 class Generator:
-  def __init__(self, name, is_training, 
+  def __init__(self, name, is_training,
         ngf=64,
         norm='instance',
         full_image_size=128,
@@ -54,9 +54,9 @@ class Generator:
       padded_residual = tf.pad(after_nn,
           [[0,0], [y_start, self.full_image_size - y_end], [x_start, self.full_image_size - x_end], [0,0]], 'CONSTANT')
       # logging
-      tf.summary.image('before', before_nn)
-      tf.summary.image('after', after_nn)
-      tf.summary.image('padded', padded_residual)
+      # tf.summary.image('before', before_nn)
+      tf.summary.image('residual', after_nn)
+      # tf.summary.image('padded', padded_residual)
       return padded_residual
 
   # XXX originally it is this __call__
