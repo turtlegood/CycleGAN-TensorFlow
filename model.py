@@ -12,7 +12,8 @@ class CycleGAN:
                X_train_file='',
                Y_train_file='',
                batch_size=1,
-               image_size=256,
+               full_image_size=256,
+               g_image_size=256,
                use_lsgan=True,
                norm='instance',
                lambda1=10.0,
@@ -40,7 +41,8 @@ class CycleGAN:
     self.use_lsgan = use_lsgan
     use_sigmoid = not use_lsgan
     self.batch_size = batch_size
-    self.image_size = image_size
+    self.g_image_size = g_image_size
+    self.full_image_size = full_image_size
     self.learning_rate = learning_rate
     self.beta1 = beta1
     self.X_train_file = X_train_file
@@ -48,7 +50,7 @@ class CycleGAN:
 
     self.is_training = tf.placeholder_with_default(True, shape=[], name='is_training')
 
-    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, image_size=image_size)
+    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, g_image_size=g_image_size)
     self.D_Y = Discriminator('D_Y',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
       
@@ -61,14 +63,15 @@ class CycleGAN:
     # self.fake_x = tf.placeholder(tf.float32,
     #     shape=[batch_size, image_size, image_size, 3])
 
+    # TODO:
     self.fake_y = tf.placeholder(tf.float32,
-        shape=[batch_size, image_size, image_size, 3])
+        shape=[batch_size, full_image_size, full_image_size, 3])
 
   def model(self):
     X_reader = Reader(self.X_train_file, name='X',
-        image_size=self.image_size, batch_size=self.batch_size)
+        image_size=self.full_image_size, batch_size=self.batch_size)
     Y_reader = Reader(self.Y_train_file, name='Y',
-        image_size=self.image_size, batch_size=self.batch_size)
+        image_size=self.full_image_size, batch_size=self.batch_size)
 
     x = X_reader.feed()
     y = Y_reader.feed(False)
