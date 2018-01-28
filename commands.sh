@@ -14,7 +14,8 @@ train )
         --face_model_path ./facenet/data/pretrained/ms.pb \
         --full_image_size 160 \
         --g_image_size 48 \
-        --eye_y 70
+        --eye_y 70 \
+        --lambda_face 0.01
     ;;
 export )
     for D in `find ./checkpoints/ -mindepth 1 -maxdepth 1 -type d`

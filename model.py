@@ -19,8 +19,7 @@ class CycleGAN:
                eye_y=128,
                use_lsgan=True,
                norm='instance',
-               lambda1=10.0,
-               lambda2=10.0,
+               lambda_face=1.0,
                learning_rate=2e-4,
                beta1=0.5,
                ngf=64
@@ -39,8 +38,7 @@ class CycleGAN:
       beta1: float, momentum term of Adam
       ngf: number of gen filters in first conv layer
     """
-    self.lambda1 = lambda1
-    self.lambda2 = lambda2
+    self.lambda_face = lambda_face
     self.use_lsgan = use_lsgan
     use_sigmoid = not use_lsgan
     self.batch_size = batch_size
@@ -67,7 +65,6 @@ class CycleGAN:
     # self.fake_x = tf.placeholder(tf.float32,
     #     shape=[batch_size, image_size, image_size, 3])
 
-    # TODO:
     self.fake_y = tf.placeholder(tf.float32,
         shape=[batch_size, full_image_size, full_image_size, 3])
 
@@ -98,7 +95,7 @@ class CycleGAN:
     # D_X_loss = self.discriminator_loss(self.D_X, x, self.fake_x, use_lsgan=self.use_lsgan)
 
     # face_loss
-    face_loss = facenet_loss.facenet_loss(x, fake_y, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
+    face_loss = facenet_loss.facenet_loss(x, fake_y, lambda_face=self.lambda_face, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
 
     # summary
     tf.summary.histogram('D_Y/true', self.D_Y(y))
@@ -199,10 +196,10 @@ class CycleGAN:
       loss = -tf.reduce_mean(ops.safe_log(D(fake_y))) / 2
     return loss
 
-  def cycle_consistency_loss(self, G, F, x, y):
-    """ cycle consistency loss (L1 norm)
-    """
-    forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
-    backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
-    loss = self.lambda1*forward_loss + self.lambda2*backward_loss
-    return loss
+  # def cycle_consistency_loss(self, G, F, x, y):
+    # """ cycle consistency loss (L1 norm)
+    # """
+    # forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
+    # backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
+    # loss = self.lambda1*forward_loss + self.lambda2*backward_loss
+    # return loss

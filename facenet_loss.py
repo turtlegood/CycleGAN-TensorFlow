@@ -7,7 +7,7 @@ import os
 import facenet
 import math
  
-def facenet_loss(x, fake_y, face_model_path='', full_image_size=128):
+def facenet_loss(x, fake_y, lambda_face=1.0, face_model_path='', full_image_size=128):
     with tf.name_scope('facenet_loss'):
         # really good input! https://github.com/tensorflow/tensorflow/issues/1758
         # print(x[0], fake_y[0])
@@ -42,7 +42,9 @@ def facenet_loss(x, fake_y, face_model_path='', full_image_size=128):
         # tf.summary.histogram('no_pre', [x[0]])
         # tf.summary.histogram('pre', [whiten_x_0])
 
-        return norm
+        multiplied_norm = lambda_face * norm
+
+        return multiplied_norm
 
 def prewhitten(input, full_image_size):
     mean, var = tf.nn.moments(input, [0, 1, 2])
