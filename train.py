@@ -33,6 +33,8 @@ tf.flags.DEFINE_string('Y', 'data/tfrecords/orange.tfrecords',
                        'Y tfrecords file for training, default: data/tfrecords/orange.tfrecords')
 tf.flags.DEFINE_string('load_model', None,
                         'folder of saved model that you wish to continue training (e.g. 20170602-1936), default: None')
+tf.flags.DEFINE_string('train_name', None,
+                        'the custom name of the training which will be shown in the folder name, default: None')
 
 
 def train():
@@ -40,11 +42,19 @@ def train():
     checkpoints_dir = "checkpoints/" + FLAGS.load_model.lstrip("checkpoints/")
   else:
     current_time = datetime.now().strftime("%Y%m%d-%H%M")
-    checkpoints_dir = "checkpoints/{}".format(current_time)
+    postfix = ('-' + FLAGS.train_name) if FLAGS.train_name is not None else ''
+    checkpoints_dir = "checkpoints/{}{}".format(current_time, postfix)
     try:
       os.makedirs(checkpoints_dir)
     except os.error:
       pass
+  
+  print('checkpoints_dir: {}'.format(checkpoints_dir))
+  print('''suggested tensorboard command:
+
+  tensorboard --logdir ./{}
+
+  '''.format(checkpoints_dir))
 
   graph = tf.Graph()
   with graph.as_default():
