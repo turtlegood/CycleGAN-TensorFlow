@@ -10,13 +10,14 @@ REAL_LABEL = 0.9
 
 class CycleGAN:
   def __init__(self,
+               FLAGS=None,
                X_train_file='',
                Y_train_file='',
                face_model_path='',
                batch_size=1,
                full_image_size=256,
                eye_image_size=256,
-               eye_y=128,
+               eye_y=256,
                use_lsgan=True,
                norm='instance',
                lambda_face=1.0,
@@ -38,6 +39,7 @@ class CycleGAN:
       beta1: float, momentum term of Adam
       ngf: number of gen filters in first conv layer
     """
+    self.FLAGS = FLAGS
     self.lambda_face = lambda_face
     self.use_lsgan = use_lsgan
     use_sigmoid = not use_lsgan
@@ -78,15 +80,42 @@ class CycleGAN:
     y = Y_reader.feed(False)
 
     # XXX
+    # fright == flipped_right
+    x_ll, x_fr = utils.full_to_eye(x, self.FLAGS)
+    y_ll, y_fr = utils.full_to_eye(y, self.FLAGS)
+    self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y, self.FLAGS)
+
+    # XXX
     # cycle_loss = self.cycle_consistency_loss(self.G, self.F, x, y)
 
     # X -> Y
-    fake_y = self.G(x)
-    G_gan_loss = self.generator_loss(self.D_Y, fake_y, use_lsgan=self.use_lsgan)
+    # fake_y = self.G(x) #original
+    res_ll, res_fr = self.G(x_ll), self.G(x_fr)
+    fake_y_ll, fake_y_fr = \
+        utils.add_residual(x_ll, res_ll), utils.add_residual(x_fr, res_fr)
+    res = utils.eye_to_full(res_ll, res_fr, self.FLAGS)
+    fake_y = utils.add_residual(x, res)
+
+    # utils.summary_float_image('res_ll', res_ll)
+    # utils.summary_float_image('res_fr', res_fr)
+    # utils.summary_float_image('fake_y_ll', fake_y_ll)
+    # utils.summary_float_image('fake_y_fr', fake_y_fr)
+    # utils.summary_float_image('self_fake_y_ll', self_fake_y_ll)
+    # utils.summary_float_image('self_fake_y_fr', self_fake_y_fr)
+    # utils.summary_float_image('res', res)
+    # utils.summary_float_image('fake_y', fake_y)
+
     # XXX
-    G_loss = G_gan_loss
+    # G_gan_loss = self.generator_loss(self.D_Y, fake_y, use_lsgan=self.use_lsgan)
+    # G_loss = G_gan_loss
     # G_loss =  G_gan_loss + cycle_loss
-    D_Y_loss = self.discriminator_loss(self.D_Y, y, self.fake_y, use_lsgan=self.use_lsgan)
+    # D_Y_loss = self.discriminator_loss(self.D_Y, y, self.fake_y, use_lsgan=self.use_lsgan)
+    G_loss = \
+        (self.generator_loss(self.D_Y, fake_y_ll, use_lsgan=self.use_lsgan) + \
+        self.generator_loss(self.D_Y, fake_y_fr, use_lsgan=self.use_lsgan)) / 2
+    D_Y_loss = \
+        (self.discriminator_loss(self.D_Y, y_ll, self_fake_y_ll, use_lsgan=self.use_lsgan) + \
+        self.discriminator_loss(self.D_Y, y_fr, self_fake_y_fr, use_lsgan=self.use_lsgan)) / 2
 
     # Y -> X
     # fake_x = self.F(y)
@@ -98,13 +127,14 @@ class CycleGAN:
     face_loss = facenet_loss.facenet_loss(x, fake_y, batch_size=self.batch_size, lambda_face=self.lambda_face, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
 
     # summary
-    tf.summary.histogram('D_Y/true', self.D_Y(y))
+    tf.summary.histogram('D_Y/true', (self.D_Y(y_ll)+self.D_Y(y_fr)/2))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
-    tf.summary.histogram('D_Y/fake', self.D_Y(fake_y)) #XXX avoid G(x) multiple times
+    tf.summary.histogram('D_Y/fake', (self.D_Y(fake_y_ll)+self.D_Y(fake_y_fr)/2)) #XXX avoid G(x) multiple times
     # tf.summary.histogram('D_X/true', self.D_X(x))
     # tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
 
-    tf.summary.scalar('loss/G', G_gan_loss)
+    # tf.summary.scalar('loss/G', G_gan_loss)
+    tf.summary.scalar('loss/G', G_loss)
     tf.summary.scalar('loss/D_Y', D_Y_loss)
     tf.summary.scalar('loss/face', tf.reduce_mean(face_loss))
     # tf.summary.scalar('loss/F', F_gan_loss)
@@ -113,7 +143,7 @@ class CycleGAN:
 
     # tf.summary.image('X/generated', utils.batch_convert2int(self.G(x)))
     # print('summary generated')
-    tf.summary.image('X/generated', utils.batch_convert2int(fake_y), max_outputs=2) #XXX avoid G(x) multiple times
+    tf.summary.image('X/generated', utils.batch_convert2int(fake_y), max_outputs=1) #XXX avoid G(x) multiple times
     # tf.summary.image('X/reconstruction', utils.batch_convert2int(self.F(self.G(x))))
     # tf.summary.image('Y/generated', utils.batch_convert2int(self.F(y)))
     # tf.summary.image('Y/reconstruction', utils.batch_convert2int(self.G(self.F(y))))
@@ -165,7 +195,7 @@ class CycleGAN:
     with tf.control_dependencies([G_optimizer, D_Y_optimizer, face_optimizer]):
       return tf.no_op(name='optimizers')
 
-  def discriminator_loss(self, D, y, fake_y, use_lsgan=True):
+  def discriminator_loss(self, D, y_eye, fake_y_eye, use_lsgan=True):
     """ Note: default: D(y).shape == (batch_size,5,5,1),
                        fake_buffer_size=50, batch_size=1
     Args:
@@ -177,24 +207,24 @@ class CycleGAN:
     """
     if use_lsgan:
       # use mean squared error
-      error_real = tf.reduce_mean(tf.squared_difference(D(y), REAL_LABEL))
-      error_fake = tf.reduce_mean(tf.square(D(fake_y)))
+      error_real = tf.reduce_mean(tf.squared_difference(D(y_eye), REAL_LABEL))
+      error_fake = tf.reduce_mean(tf.square(D(fake_y_eye)))
     else:
       # use cross entropy
-      error_real = -tf.reduce_mean(ops.safe_log(D(y)))
-      error_fake = -tf.reduce_mean(ops.safe_log(1-D(fake_y)))
+      error_real = -tf.reduce_mean(ops.safe_log(D(y_eye)))
+      error_fake = -tf.reduce_mean(ops.safe_log(1-D(fake_y_eye)))
     loss = (error_real + error_fake) / 2
     return loss
 
-  def generator_loss(self, D, fake_y, use_lsgan=True):
+  def generator_loss(self, D, fake_y_eye, use_lsgan=True):
     """  fool discriminator into believing that G(x) is real
     """
     if use_lsgan:
       # use mean squared error
-      loss = tf.reduce_mean(tf.squared_difference(D(fake_y), REAL_LABEL))
+      loss = tf.reduce_mean(tf.squared_difference(D(fake_y_eye), REAL_LABEL))
     else:
       # heuristic, non-saturating loss
-      loss = -tf.reduce_mean(ops.safe_log(D(fake_y))) / 2
+      loss = -tf.reduce_mean(ops.safe_log(D(fake_y_eye))) / 2
     return loss
 
   # def cycle_consistency_loss(self, G, F, x, y):

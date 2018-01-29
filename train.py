@@ -68,6 +68,7 @@ def train():
   graph = tf.Graph()
   with graph.as_default():
     cycle_gan = CycleGAN(
+        FLAGS=FLAGS,
         X_train_file=FLAGS.X,
         Y_train_file=FLAGS.Y,
         face_model_path=FLAGS.face_model_path,

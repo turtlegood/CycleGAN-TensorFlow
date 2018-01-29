@@ -51,4 +51,8 @@ class Discriminator:
     self.reuse = True
     self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)
 
+    # import traceback; print('\n\n\n'); traceback.print_stack(); print('\n\n\n')
+    # utils.summary_float_image('D_input', input)
+    # utils.summary_float_image('D_output', output)
+
     return output

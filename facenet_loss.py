@@ -6,6 +6,7 @@ import sys
 import os
 import facenet
 import math
+import utils
  
 def facenet_loss(x, fake_y, batch_size=1, lambda_face=1.0, face_model_path='', full_image_size=128):
     print('facenet_loss lambda_face=%f, face_model_path=%s, full_image_size=%d'%(lambda_face, face_model_path, full_image_size))
@@ -57,6 +58,7 @@ def facenet_loss(x, fake_y, batch_size=1, lambda_face=1.0, face_model_path='', f
         # tf.summary.image('pre', [whiten_x_0])
         # tf.summary.histogram('no_pre', [x[0]])
         # tf.summary.histogram('pre', [whiten_x_0])
+        tf.summary.histogram('embeddings', embeddings)
 
         multiplied_norm = lambda_face * norm
         reduced_norm = tf.reduce_mean(multiplied_norm)
