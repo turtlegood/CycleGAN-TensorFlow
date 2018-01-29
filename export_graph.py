@@ -20,6 +20,7 @@ tf.flags.DEFINE_integer('full_image_size', 256, '')
 tf.flags.DEFINE_integer('eye_image_size', 256, '')
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('eye_y', '', '')
+tf.flags.DEFINE_float('lambda_pix', -1, '')
 tf.flags.DEFINE_integer('ngf', 64,
                         'number of gen filters in first conv layer, default: 64')
 tf.flags.DEFINE_string('norm', 'instance',
@@ -31,6 +32,7 @@ def export_graph():
 
   with graph.as_default():
     cycle_gan = CycleGAN(
+        FLAGS=FLAGS,
         ngf=FLAGS.ngf,
         norm=FLAGS.norm,
         eye_image_size=FLAGS.eye_image_size,
@@ -46,6 +48,7 @@ def export_graph():
       # output_image = cycle_gan.G.sample(tf.expand_dims(input_image, 0))
     # else:
       # output_image = cycle_gan.F.sample(tf.expand_dims(input_image, 0))
+    # TODO: TOTALLY WRONG!!!
     output_image = cycle_gan.G.sample(tf.expand_dims(input_image, 0))
 
     output_image = tf.identity(output_image, name='output_image')

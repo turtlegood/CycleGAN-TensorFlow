@@ -22,7 +22,7 @@ train )
         --eye_image_size 48 \
         --eye_y 70 \
         --lambda_face 0.01 \
-        --lambda_pix 1e-4 \
+        --lambda_pix 1e-6 \
         --batch_size 8 \
         $addition
     ;;
@@ -36,7 +36,8 @@ export )
             --face_model_path ./facenet/data/pretrained/ms.pb \
             --full_image_size 160 \
             --eye_image_size 48 \
-            --eye_y 70
+            --eye_y 70 \
+            --lambda_pix 1e-6
     fi
     ;;
 inference | infer )
