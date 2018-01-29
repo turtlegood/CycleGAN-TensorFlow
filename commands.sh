@@ -24,10 +24,28 @@ export )
         short="${D#./checkpoints/}"
         python3 export_graph.py \
             --checkpoint_dir checkpoints/$short \
-            --XtoY_model add-$short.pb \
-            --YtoX_model rem-$short.pb \
-            --image_size 48
+            --XtoY_model $short.pb \
+            --face_model_path ./facenet/data/pretrained/ms.pb \
+            --full_image_size 160 \
+            --g_image_size 48
     done
+    ;;
+export_one )
+    short="20180129-1050"
+    python3 export_graph.py \
+        --checkpoint_dir checkpoints/$short \
+        --XtoY_model $short.pb \
+        --face_model_path ./facenet/data/pretrained/ms.pb \
+        --full_image_size 160 \
+        --g_image_size 48 \
+        --eye_y 70
+    ;;
+inference | infer )
+    python3 inference.py \
+        --model checkpoints/20180129-1120/auto-0.pb \
+        --input data/test_in.JPEG \
+        --output data/test_out.JPEG \
+        --full_image_size 160
     ;;
 * )
     echo "Wrong input"

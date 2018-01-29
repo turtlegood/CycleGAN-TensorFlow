@@ -8,6 +8,7 @@ import facenet
 import math
  
 def facenet_loss(x, fake_y, lambda_face=1.0, face_model_path='', full_image_size=128):
+    print('facenet_loss lambda_face=%f, face_model_path=%s, full_image_size=%d'%(lambda_face, face_model_path, full_image_size))
     with tf.name_scope('facenet_loss'):
         # really good input! https://github.com/tensorflow/tensorflow/issues/1758
         # print(x[0], fake_y[0])
@@ -19,7 +20,7 @@ def facenet_loss(x, fake_y, lambda_face=1.0, face_model_path='', full_image_size
 
         # facenet.load_model(args.model)
         model_exp = os.path.expanduser(face_model_path)
-        print('facenet model filename: %s' % model_exp)
+        # print('facenet model filename: %s' % model_exp)
         with gfile.FastGFile(model_exp,'rb') as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())

@@ -18,6 +18,7 @@ class Generator:
     self.full_image_size = full_image_size
     self.g_image_size = g_image_size
     self.eye_y = eye_y
+    print('generator full=%d g=%d eye_y=%d'%(full_image_size, g_image_size, eye_y))
 
   def __call__(self, input):
     # input: batch_size x full_image_size x full_image_size x 3
@@ -56,6 +57,7 @@ class Generator:
       # logging
       # tf.summary.image('before', before_nn)
       tf.summary.image('residual', after_nn)
+      tf.summary.histogram('residual', after_nn)
       # tf.summary.image('padded', padded_residual)
       return padded_residual
 

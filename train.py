@@ -130,6 +130,18 @@ def train():
               )
         )
 
+        if step % 100 == 0:
+          print('export current graph')
+          input_image = tf.placeholder(tf.float32,
+            shape=[FLAGS.full_image_size, FLAGS.full_image_size, 3], name='input_image')
+          output_image = cycle_gan.G.sample(tf.expand_dims(input_image, 0))
+          output_image = tf.identity(output_image, name='output_image')
+
+          output_graph_def = tf.graph_util.convert_variables_to_constants(
+              sess, graph.as_graph_def(), [output_image.op.name])
+          tf.train.write_graph(output_graph_def, checkpoints_dir, 'auto-' + str(step) + '.pb', as_text=False)
+          # tf.train.write_graph(output_graph_def, checkpoints_dir, 'auto-' + str(step) + '.pbtxt', as_text=True)
+
         if step < 500 or step % 10 == 0:
           train_writer.add_summary(summary, step)
           train_writer.flush()
