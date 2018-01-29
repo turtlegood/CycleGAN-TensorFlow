@@ -18,34 +18,29 @@ train )
         --lambda_face 0.01
     ;;
 export )
-    for D in `find ./checkpoints/ -mindepth 1 -maxdepth 1 -type d`
-    do
-        echo exporting: $D
-        short="${D#./checkpoints/}"
+    if test "$#" -ne 2;
+    then
+        echo "need param 2 to be folder name"
+    else 
         python3 export_graph.py \
-            --checkpoint_dir checkpoints/$short \
-            --XtoY_model $short.pb \
+            --name "$2" \
             --face_model_path ./facenet/data/pretrained/ms.pb \
             --full_image_size 160 \
-            --g_image_size 48
-    done
-    ;;
-export_one )
-    short="20180129-1206"
-    python3 export_graph.py \
-        --checkpoint_dir checkpoints/$short \
-        --XtoY_model $short.pb \
-        --face_model_path ./facenet/data/pretrained/ms.pb \
-        --full_image_size 160 \
-        --g_image_size 48 \
-        --eye_y 70
+            --g_image_size 48 \
+            --eye_y 70
+    fi
     ;;
 inference | infer )
+    if test "$#" -ne 2;
+    then
+        echo "need param 2 to be folder name"
+    else 
     python3 inference.py \
-        --model pretrained/20180129-1206.pb \
-        --input data/test_in.JPEG \
-        --output data/test_out.JPEG \
+        --model_dir pretrained/$2 \
+        --input_dir test/input \
+        --output_dir test/$2 \
         --full_image_size 160
+    fi
     ;;
 * )
     echo "Wrong input"
