@@ -25,11 +25,12 @@ class Generator:
     left_residual = self.one_eye_residual(input, 'left')
     right_residual = self.one_eye_residual(input, 'right')
     added_layer = input + left_residual + right_residual
-    # output = tf.nn.tanh(added_layer)
-    output = added_layer # remove tanh
+    output = tf.nn.tanh(added_layer) # need tanh ?
+    # output = added_layer # no tanh?
 
-    tf.summary.histogram('g_input', input)
-    tf.summary.histogram('g_output', output)
+    utils.summary_float_image('g_input', input)
+    utils.summary_float_image('g_input_tanh', tf.nn.tanh(input))
+    utils.summary_float_image('g_output', output)
 
     return output
 
@@ -61,8 +62,7 @@ class Generator:
           [[0,0], [y_start, self.full_image_size - y_end], [x_start, self.full_image_size - x_end], [0,0]], 'CONSTANT')
       # logging
       # tf.summary.image('before', before_nn)
-      tf.summary.image('residual', after_nn)
-      tf.summary.histogram('residual', after_nn)
+      utils.summary_float_image('residual', after_nn)
       # tf.summary.image('padded', padded_residual)
       return padded_residual
 

@@ -8,6 +8,12 @@ data | build_data )
         --Y_output_file ./data/not.tfrecords
     ;;
 train )
+    if test "$#" -ne 2;
+    then
+        addition=""
+    else 
+        addition="--load_model $2"
+    fi
     python3 train.py \
         --X ./data/has.tfrecords \
         --Y ./data/not.tfrecords \
@@ -16,7 +22,8 @@ train )
         --g_image_size 48 \
         --eye_y 70 \
         --lambda_face 0.01 \
-        --batch_size 8
+        --batch_size 8 \
+        $addition
     ;;
 export )
     if test "$#" -ne 2;
