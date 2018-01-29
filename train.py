@@ -40,6 +40,11 @@ tf.flags.DEFINE_string('load_model', None,
 tf.flags.DEFINE_string('train_name', None,
                         'the custom name of the training which will be shown in the folder name, default: None')
 
+def does_save_checkpoint(step):
+  if step <= 200000:
+    return step % 10000 == 0
+  else:
+    return step % 20000 == 0
 
 def train():
   if FLAGS.load_model is not None:
@@ -86,7 +91,7 @@ def train():
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=100) # XXX
 
   with tf.Session(graph=graph) as sess:
     if FLAGS.load_model is not None:
@@ -130,18 +135,6 @@ def train():
               )
         )
 
-        if step % 100 == 0:
-          print('export current graph')
-          input_image = tf.placeholder(tf.float32,
-            shape=[FLAGS.full_image_size, FLAGS.full_image_size, 3], name='input_image')
-          output_image = cycle_gan.G.sample(tf.expand_dims(input_image, 0))
-          output_image = tf.identity(output_image, name='output_image')
-
-          output_graph_def = tf.graph_util.convert_variables_to_constants(
-              sess, graph.as_graph_def(), [output_image.op.name])
-          tf.train.write_graph(output_graph_def, checkpoints_dir, 'auto-' + str(step) + '.pb', as_text=False)
-          # tf.train.write_graph(output_graph_def, checkpoints_dir, 'auto-' + str(step) + '.pbtxt', as_text=True)
-
         if step < 500 or step % 10 == 0:
           train_writer.add_summary(summary, step)
           train_writer.flush()
@@ -155,7 +148,7 @@ def train():
           # logging.info('  F_loss   : {}'.format(F_loss_val))
           # logging.info('  D_X_loss : {}'.format(D_X_loss_val))
 
-        if step % 10000 == 0:
+        if does_save_checkpoint(step):
           save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)
           logging.info("Model saved in file: %s" % save_path)
 

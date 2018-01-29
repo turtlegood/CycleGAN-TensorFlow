@@ -31,7 +31,7 @@ export )
     done
     ;;
 export_one )
-    short="20180129-1050"
+    short="20180129-1206"
     python3 export_graph.py \
         --checkpoint_dir checkpoints/$short \
         --XtoY_model $short.pb \
@@ -42,7 +42,7 @@ export_one )
     ;;
 inference | infer )
     python3 inference.py \
-        --model checkpoints/20180129-1120/auto-0.pb \
+        --model pretrained/20180129-1206.pb \
         --input data/test_in.JPEG \
         --output data/test_out.JPEG \
         --full_image_size 160

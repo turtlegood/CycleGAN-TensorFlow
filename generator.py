@@ -25,7 +25,8 @@ class Generator:
     left_residual = self.one_eye_residual(input, 'left')
     right_residual = self.one_eye_residual(input, 'right')
     added_layer = input + left_residual + right_residual
-    output = tf.nn.tanh(added_layer)
+    # output = tf.nn.tanh(added_layer)
+    output = added_layer # remove tanh
     return output
 
   def one_eye_residual(self, input, eye_mode):
