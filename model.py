@@ -78,12 +78,14 @@ class CycleGAN:
 
     x = X_reader.feed()
     y = Y_reader.feed(False)
+    # tanh_x = tf.nn.tanh(x)
 
     # XXX
-    # fright == flipped_right
+    # fr == flipped_right
     x_ll, x_fr = utils.full_to_eye(x, self.FLAGS)
-    y_ll, y_fr = utils.full_to_eye(y, self.FLAGS)
+    raw_y_ll, raw_y_fr = utils.full_to_eye(y, self.FLAGS)
     self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y, self.FLAGS)
+    tanh_y_ll, tanh_y_fr = tf.nn.tanh(raw_y_ll), tf.nn.tanh(raw_y_fr) 
 
     # XXX
     # cycle_loss = self.cycle_consistency_loss(self.G, self.F, x, y)
@@ -96,7 +98,26 @@ class CycleGAN:
     res = utils.eye_to_full(res_ll, res_fr, self.FLAGS)
     fake_y = utils.add_residual(x, res)
 
+    utils.summary_float_image('raw_y_ll', raw_y_ll, summary_image=False)
+    utils.summary_float_image('tanh_y_ll', tanh_y_ll, summary_image=False)
+    utils.summary_float_image('fake_y_ll', fake_y_ll, summary_image=False)
+
+    utils.summary_float_image('res_ll', res_ll)
+    utils.summary_float_image('res_fr', res_fr)
+
+    # utils.summary_float_image('x', x)
+    # utils.summary_float_image('tanh_x', tanh_x)
+    # utils.summary_float_image('fake_y', fake_y)
+
     # utils.summary_float_image('res_ll', res_ll)
+    # utils.summary_float_image('res_fr', res_fr)
+    # utils.summary_float_image('fake_y_ll', fake_y_ll)
+    # utils.summary_float_image('fake_y_fr', fake_y_fr)
+    # utils.summary_float_image('self_fake_y_ll', self_fake_y_ll)
+    # utils.summary_float_image('self_fake_y_fr', self_fake_y_fr)
+    # utils.summary_float_image('res', res)
+    # utils.summary_float_image('fake_y', fake_y)
+
     # utils.summary_float_image('res_fr', res_fr)
     # utils.summary_float_image('fake_y_ll', fake_y_ll)
     # utils.summary_float_image('fake_y_fr', fake_y_fr)
@@ -114,8 +135,8 @@ class CycleGAN:
         (self.generator_loss(self.D_Y, fake_y_ll, use_lsgan=self.use_lsgan) + \
         self.generator_loss(self.D_Y, fake_y_fr, use_lsgan=self.use_lsgan)) / 2
     D_Y_loss = \
-        (self.discriminator_loss(self.D_Y, y_ll, self_fake_y_ll, use_lsgan=self.use_lsgan) + \
-        self.discriminator_loss(self.D_Y, y_fr, self_fake_y_fr, use_lsgan=self.use_lsgan)) / 2
+        (self.discriminator_loss(self.D_Y, raw_y_ll, self_fake_y_ll, use_lsgan=self.use_lsgan) + \
+        self.discriminator_loss(self.D_Y, raw_y_fr, self_fake_y_fr, use_lsgan=self.use_lsgan)) / 2
 
     # Y -> X
     # fake_x = self.F(y)
@@ -127,7 +148,7 @@ class CycleGAN:
     face_loss = facenet_loss.facenet_loss(x, fake_y, batch_size=self.batch_size, lambda_face=self.lambda_face, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
 
     # summary
-    tf.summary.histogram('D_Y/true', (self.D_Y(y_ll)+self.D_Y(y_fr)/2))
+    tf.summary.histogram('D_Y/true', (self.D_Y(raw_y_ll)+self.D_Y(raw_y_fr)/2))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
     tf.summary.histogram('D_Y/fake', (self.D_Y(fake_y_ll)+self.D_Y(fake_y_fr)/2)) #XXX avoid G(x) multiple times
     # tf.summary.histogram('D_X/true', self.D_X(x))
@@ -148,13 +169,16 @@ class CycleGAN:
     # tf.summary.image('Y/generated', utils.batch_convert2int(self.F(y)))
     # tf.summary.image('Y/reconstruction', utils.batch_convert2int(self.G(self.F(y))))
 
+    # only for test
+    # G_loss = 0 * G_loss
+    # face_loss = 0 * face_loss
+
     # XXX
     # return G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x
     return G_loss, D_Y_loss, face_loss, fake_y
 
   # def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss):
   def optimize(self, G_loss, D_Y_loss, face_loss):
-    # TODO: face_loss
     def make_optimizer(loss, variables, name='Adam'):
       """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
           and a linearly decaying rate that goes to zero over the next 100k steps
