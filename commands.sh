@@ -19,7 +19,7 @@ train )
         --Y ./data/not.tfrecords \
         --face_model_path ./facenet/data/pretrained/ms.pb \
         --full_image_size 160 \
-        --g_image_size 48 \
+        --eye_image_size 48 \
         --eye_y 70 \
         --lambda_face 0.01 \
         --batch_size 8 \
@@ -34,7 +34,7 @@ export )
             --name "$2" \
             --face_model_path ./facenet/data/pretrained/ms.pb \
             --full_image_size 160 \
-            --g_image_size 48 \
+            --eye_image_size 48 \
             --eye_y 70
     fi
     ;;

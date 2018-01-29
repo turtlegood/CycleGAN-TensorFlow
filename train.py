@@ -11,7 +11,7 @@ FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 256, '')
-tf.flags.DEFINE_integer('g_image_size', 256, '')
+tf.flags.DEFINE_integer('eye_image_size', 256, '')
 tf.flags.DEFINE_integer('eye_y', 128, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
                      'use lsgan (mean squared error) or cross entropy loss, default: True')
@@ -74,7 +74,7 @@ def train():
         batch_size=FLAGS.batch_size,
         full_image_size=FLAGS.full_image_size,
         eye_y=FLAGS.eye_y,
-        g_image_size=FLAGS.g_image_size,
+        eye_image_size=FLAGS.eye_image_size,
         use_lsgan=FLAGS.use_lsgan,
         norm=FLAGS.norm,
         lambda_face=FLAGS.lambda_face,

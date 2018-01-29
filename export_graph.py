@@ -17,7 +17,7 @@ FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_string('name', '', '')
 tf.flags.DEFINE_integer('full_image_size', 256, '')
-tf.flags.DEFINE_integer('g_image_size', 256, '')
+tf.flags.DEFINE_integer('eye_image_size', 256, '')
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('eye_y', '', '')
 tf.flags.DEFINE_integer('ngf', 64,
@@ -33,7 +33,7 @@ def export_graph():
     cycle_gan = CycleGAN(
         ngf=FLAGS.ngf,
         norm=FLAGS.norm,
-        g_image_size=FLAGS.g_image_size,
+        eye_image_size=FLAGS.eye_image_size,
         full_image_size=FLAGS.full_image_size,
         face_model_path=FLAGS.face_model_path,
         eye_y=FLAGS.eye_y

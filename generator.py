@@ -7,7 +7,7 @@ class Generator:
         ngf=64,
         norm='instance',
         full_image_size=128,
-        g_image_size=128,
+        eye_image_size=128,
         eye_y=128
         ):
     self.name = name
@@ -16,9 +16,9 @@ class Generator:
     self.norm = norm
     self.is_training = is_training
     self.full_image_size = full_image_size
-    self.g_image_size = g_image_size
+    self.eye_image_size = eye_image_size
     self.eye_y = eye_y
-    print('generator full=%d g=%d eye_y=%d'%(full_image_size, g_image_size, eye_y))
+    print('generator full=%d g=%d eye_y=%d'%(full_image_size, eye_image_size, eye_y))
 
   def __call__(self, input):
     # input: batch_size x full_image_size x full_image_size x 3
@@ -38,12 +38,12 @@ class Generator:
     with tf.name_scope('eye' + eye_mode):
       # find crop box
       half_full_size = self.full_image_size // 2
-      half_g_size = self.g_image_size // 2
+      half_g_size = self.eye_image_size // 2
       y_start, y_end = self.eye_y - half_g_size, self.eye_y + half_g_size
       if eye_mode == 'left':
-        x_start, x_end = half_full_size - self.g_image_size, half_full_size
+        x_start, x_end = half_full_size - self.eye_image_size, half_full_size
       elif eye_mode == 'right':
-        x_start, x_end = half_full_size, half_full_size + self.g_image_size
+        x_start, x_end = half_full_size, half_full_size + self.eye_image_size
       else:
         raise Exception('wrong eye_mode')
       # print(y_start, y_end, x_start, x_end)
@@ -84,7 +84,7 @@ class Generator:
           reuse=self.reuse, name='d128')                                # (?, w/4, h/4, 128)
 
       # XXX
-      if self.g_image_size <= 128:
+      if self.eye_image_size <= 128:
         # use 6 residual blocks for 128x128 images
         res_output = ops.n_res_blocks(d128, reuse=self.reuse, n=6)      # (?, w/4, h/4, 128)
       else:
@@ -95,7 +95,7 @@ class Generator:
       u64 = ops.uk(res_output, 2*self.ngf, is_training=self.is_training, norm=self.norm,
           reuse=self.reuse, name='u64')                                 # (?, w/2, h/2, 64)
       u32 = ops.uk(u64, self.ngf, is_training=self.is_training, norm=self.norm,
-          reuse=self.reuse, name='u32', output_size=self.g_image_size)         # (?, w, h, 32)
+          reuse=self.reuse, name='u32', output_size=self.eye_image_size)         # (?, w, h, 32)
 
       # conv layer
       # Note: the paper said that ReLU and _norm were used

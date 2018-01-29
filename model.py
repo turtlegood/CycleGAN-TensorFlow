@@ -15,7 +15,7 @@ class CycleGAN:
                face_model_path='',
                batch_size=1,
                full_image_size=256,
-               g_image_size=256,
+               eye_image_size=256,
                eye_y=128,
                use_lsgan=True,
                norm='instance',
@@ -43,7 +43,7 @@ class CycleGAN:
     use_sigmoid = not use_lsgan
     self.batch_size = batch_size
     self.face_model_path = face_model_path
-    self.g_image_size = g_image_size
+    self.eye_image_size = eye_image_size
     self.full_image_size = full_image_size
     self.learning_rate = learning_rate
     self.beta1 = beta1
@@ -52,7 +52,7 @@ class CycleGAN:
 
     self.is_training = tf.placeholder_with_default(True, shape=[], name='is_training')
 
-    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, g_image_size=g_image_size, full_image_size=full_image_size, eye_y=eye_y)
+    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, eye_image_size=eye_image_size, full_image_size=full_image_size, eye_y=eye_y)
     self.D_Y = Discriminator('D_Y',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
       
