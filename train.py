@@ -22,6 +22,7 @@ tf.flags.DEFINE_string('norm', 'instance',
 # tf.flags.DEFINE_integer('lambda2', 10.0,
 #                         'weight for backward cycle loss (Y->X->Y), default: 10.0')
 tf.flags.DEFINE_float('lambda_face', 1.0, '')
+tf.flags.DEFINE_float('lambda_pix', 1.0, '')
 tf.flags.DEFINE_float('learning_rate', 2e-4,
                       'initial learning rate for Adam, default: 0.0002')
 tf.flags.DEFINE_float('beta1', 0.5,
@@ -87,8 +88,8 @@ def train():
     # XXX
     # G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x = cycle_gan.model()
     # optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
-    G_loss, D_Y_loss, face_loss, fake_y = cycle_gan.model()
-    optimizers = cycle_gan.optimize(G_loss, D_Y_loss, face_loss)
+    G_loss, D_Y_loss, face_loss, pix_loss, fake_y = cycle_gan.model()
+    optimizers = cycle_gan.optimize(G_loss, D_Y_loss, face_loss, pix_loss)
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)

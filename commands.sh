@@ -22,6 +22,7 @@ train )
         --eye_image_size 48 \
         --eye_y 70 \
         --lambda_face 0.01 \
+        --lambda_pix 1e-4 \
         --batch_size 8 \
         $addition
     ;;
