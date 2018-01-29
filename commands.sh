@@ -15,7 +15,8 @@ train )
         --full_image_size 160 \
         --g_image_size 48 \
         --eye_y 70 \
-        --lambda_face 0.01
+        --lambda_face 0.01 \
+        --batch_size 8
     ;;
 export )
     if test "$#" -ne 2;

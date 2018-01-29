@@ -95,7 +95,7 @@ class CycleGAN:
     # D_X_loss = self.discriminator_loss(self.D_X, x, self.fake_x, use_lsgan=self.use_lsgan)
 
     # face_loss
-    face_loss = facenet_loss.facenet_loss(x, fake_y, lambda_face=self.lambda_face, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
+    face_loss = facenet_loss.facenet_loss(x, fake_y, batch_size=self.batch_size, lambda_face=self.lambda_face, face_model_path=self.face_model_path, full_image_size=self.full_image_size)
 
     # summary
     tf.summary.histogram('D_Y/true', self.D_Y(y))
@@ -106,13 +106,14 @@ class CycleGAN:
 
     tf.summary.scalar('loss/G', G_gan_loss)
     tf.summary.scalar('loss/D_Y', D_Y_loss)
-    tf.summary.scalar('loss/face', face_loss)
+    tf.summary.scalar('loss/face', tf.reduce_mean(face_loss))
     # tf.summary.scalar('loss/F', F_gan_loss)
     # tf.summary.scalar('loss/D_X', D_X_loss)
     # tf.summary.scalar('loss/cycle', cycle_loss)
 
     # tf.summary.image('X/generated', utils.batch_convert2int(self.G(x)))
-    tf.summary.image('X/generated', utils.batch_convert2int(fake_y)) #XXX avoid G(x) multiple times
+    # print('summary generated')
+    tf.summary.image('X/generated', utils.batch_convert2int(fake_y), max_outputs=2) #XXX avoid G(x) multiple times
     # tf.summary.image('X/reconstruction', utils.batch_convert2int(self.F(self.G(x))))
     # tf.summary.image('Y/generated', utils.batch_convert2int(self.F(y)))
     # tf.summary.image('Y/reconstruction', utils.batch_convert2int(self.G(self.F(y))))

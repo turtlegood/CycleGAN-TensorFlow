@@ -46,7 +46,7 @@ class Reader():
           )
 
       if is_log:
-        tf.summary.image('_input', images)
+        tf.summary.image('_input', images, max_outputs=2)
     return images
 
   def _preprocess(self, image):

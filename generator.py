@@ -27,6 +27,10 @@ class Generator:
     added_layer = input + left_residual + right_residual
     # output = tf.nn.tanh(added_layer)
     output = added_layer # remove tanh
+
+    tf.summary.histogram('g_input', input)
+    tf.summary.histogram('g_output', output)
+
     return output
 
   def one_eye_residual(self, input, eye_mode):
