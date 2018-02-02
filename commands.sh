@@ -1,12 +1,21 @@
 case "$1" in 
-data | build_data )
+prebuild_data | prebuild )
+    python3 prebuild_data.py \
+        --base_path ~/TomChen/Others/CelebaData \
+        --postfix not has
+    ;;
+build_data )
     # mv ./data/crop_has/output/ ./data/crop_has_aug/
-    python3 build_data.py --X_input_dir ./data/crop_has_aug --Y_input_dir ./data/crop_not_aug --X_output_file ./data/has.tfrecords --Y_output_file ./data/not.tfrecords
+    python3 build_data.py \
+        --X_input_dir ~/TomChen/Others/CelebaData/crop_has \
+        --Y_input_dir ~/TomChen/Others/CelebaData/crop_not \
+        --X_output_file ~/TomChen/Others/CelebaData/has.tfrecords \
+        --Y_output_file ~/TomChen/Others/CelebaData/not.tfrecords
     ;;
 train )
     python3 train.py \
-        --X ./data/has.tfrecords \
-        --Y ./data/not.tfrecords \
+        --X ~/TomChen/Others/CelebaData/has.tfrecords \
+        --Y ~/TomChen/Others/CelebaData/not.tfrecords
         --image_size 48
     ;;
 export )
