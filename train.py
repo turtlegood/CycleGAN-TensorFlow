@@ -9,7 +9,9 @@ from utils import ImagePool
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
-tf.flags.DEFINE_integer('image_size', 256, 'image size, default: 256')
+tf.flags.DEFINE_integer('full_image_size', 0, '')
+tf.flags.DEFINE_integer('eye_image_size', 0, '')
+tf.flags.DEFINE_integer('eye_y', 0, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
                      'use lsgan (mean squared error) or cross entropy loss, default: True')
 tf.flags.DEFINE_string('norm', 'instance',
@@ -59,10 +61,10 @@ def train():
   graph = tf.Graph()
   with graph.as_default():
     cycle_gan = CycleGAN(
+        FLAGS=FLAGS,
         X_train_file=FLAGS.X,
         Y_train_file=FLAGS.Y,
         batch_size=FLAGS.batch_size,
-        image_size=FLAGS.image_size,
         use_lsgan=FLAGS.use_lsgan,
         norm=FLAGS.norm,
         lambda1=FLAGS.lambda1,
@@ -71,7 +73,7 @@ def train():
         beta1=FLAGS.beta1,
         ngf=FLAGS.ngf
     )
-    G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x = cycle_gan.model()
+    (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y, fake_x) = cycle_gan.model()
     optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
 
     summary_op = tf.summary.merge_all()
@@ -104,8 +106,8 @@ def train():
         _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val, summary = (
               sess.run(
                   [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss, summary_op],
-                  feed_dict={cycle_gan.fake_y: fake_Y_pool.query(fake_y_val),
-                             cycle_gan.fake_x: fake_X_pool.query(fake_x_val)}
+                  feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val),
+                             cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
               )
         )
 

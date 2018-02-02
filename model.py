@@ -9,10 +9,10 @@ REAL_LABEL = 0.9
 
 class CycleGAN:
   def __init__(self,
+               FLAGS=None,
                X_train_file='',
                Y_train_file='',
                batch_size=1,
-               image_size=256,
                use_lsgan=True,
                norm='instance',
                lambda1=10.0,
@@ -35,12 +35,12 @@ class CycleGAN:
       beta1: float, momentum term of Adam
       ngf: number of gen filters in first conv layer
     """
+    self.FLAGS = FLAGS
     self.lambda1 = lambda1
     self.lambda2 = lambda2
     self.use_lsgan = use_lsgan
     use_sigmoid = not use_lsgan
     self.batch_size = batch_size
-    self.image_size = image_size
     self.learning_rate = learning_rate
     self.beta1 = beta1
     self.X_train_file = X_train_file
@@ -48,59 +48,72 @@ class CycleGAN:
 
     self.is_training = tf.placeholder_with_default(True, shape=[], name='is_training')
 
-    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, image_size=image_size)
+    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, image_size=self.FLAGS.eye_image_size)
     self.D_Y = Discriminator('D_Y',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
-    self.F = Generator('F', self.is_training, norm=norm, image_size=image_size)
+    self.F = Generator('F', self.is_training, norm=norm, image_size=self.FLAGS.eye_image_size)
     self.D_X = Discriminator('D_X',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
 
-    self.fake_x = tf.placeholder(tf.float32,
-        shape=[batch_size, image_size, image_size, 3])
-    self.fake_y = tf.placeholder(tf.float32,
-        shape=[batch_size, image_size, image_size, 3])
+    self.fake_x_full = tf.placeholder(tf.float32,
+        shape=[batch_size, self.FLAGS.full_image_size, self.FLAGS.full_image_size, 3])
+    self.fake_y_full = tf.placeholder(tf.float32,
+        shape=[batch_size, self.FLAGS.full_image_size, self.FLAGS.full_image_size, 3])
 
   def model(self):
     X_reader = Reader(self.X_train_file, name='X',
-        image_size=self.image_size, batch_size=self.batch_size)
+        image_size=self.FLAGS.full_image_size, batch_size=self.batch_size)
     Y_reader = Reader(self.Y_train_file, name='Y',
-        image_size=self.image_size, batch_size=self.batch_size)
+        image_size=self.FLAGS.full_image_size, batch_size=self.batch_size)
 
-    x = X_reader.feed()
-    y = Y_reader.feed()
+    x_full = X_reader.feed()
+    y_full = Y_reader.feed()
 
-    cycle_loss = self.cycle_consistency_loss(self.G, self.F, x, y)
+    x_ll, x_fr = utils.full_to_eye(x_full, self.FLAGS)
+    y_ll, y_fr = utils.full_to_eye(y_full, self.FLAGS)
+    self_fake_x_ll, self_fake_x_fr = utils.full_to_eye(self.fake_x_full, self.FLAGS)
+    self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y_full, self.FLAGS)
+
+    losses_ll, fakes_ll = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll)
+    losses_fr, fakes_fr = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr)
+    losses = [sum(x) / 2 for x in zip(losses_ll, losses_fr)]
+    fakes = [tf.concat([l, r], 0) for l,r in zip(fakes_ll, fakes_fr)]
+
+    return losses, fakes
+  
+  def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part):
+    cycle_loss = self.cycle_consistency_loss(self.G, self.F, x_part, y_part)
 
     # X -> Y
-    fake_y = self.G(x)
-    G_gan_loss = self.generator_loss(self.D_Y, fake_y, use_lsgan=self.use_lsgan)
+    fake_y_part = self.G(x_part)
+    G_gan_loss = self.generator_loss(self.D_Y, fake_y_part, use_lsgan=self.use_lsgan)
     G_loss =  G_gan_loss + cycle_loss
-    D_Y_loss = self.discriminator_loss(self.D_Y, y, self.fake_y, use_lsgan=self.use_lsgan)
+    D_Y_loss = self.discriminator_loss(self.D_Y, y_part, self_fake_y_part, use_lsgan=self.use_lsgan)
 
     # Y -> X
-    fake_x = self.F(y)
-    F_gan_loss = self.generator_loss(self.D_X, fake_x, use_lsgan=self.use_lsgan)
+    fake_x_part = self.F(y_part)
+    F_gan_loss = self.generator_loss(self.D_X, fake_x_part, use_lsgan=self.use_lsgan)
     F_loss = F_gan_loss + cycle_loss
-    D_X_loss = self.discriminator_loss(self.D_X, x, self.fake_x, use_lsgan=self.use_lsgan)
+    D_X_loss = self.discriminator_loss(self.D_X, x_part, self_fake_x_part, use_lsgan=self.use_lsgan)
+
+    tf.summary.scalar('loss_ll/G', G_gan_loss)
+    tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
+    tf.summary.scalar('loss_ll/F', F_gan_loss)
+    tf.summary.scalar('loss_ll/D_X', D_X_loss)
+    tf.summary.scalar('loss_ll/cycle', cycle_loss)
 
     # summary
-    tf.summary.histogram('D_Y/true', self.D_Y(y))
-    tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
-    tf.summary.histogram('D_X/true', self.D_X(x))
-    tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
+    # tf.summary.histogram('D_Y/true', self.D_Y(y))
+    # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
+    # tf.summary.histogram('D_X/true', self.D_X(x))
+    # tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
 
-    tf.summary.scalar('loss/G', G_gan_loss)
-    tf.summary.scalar('loss/D_Y', D_Y_loss)
-    tf.summary.scalar('loss/F', F_gan_loss)
-    tf.summary.scalar('loss/D_X', D_X_loss)
-    tf.summary.scalar('loss/cycle', cycle_loss)
+    # utils.summary_float_image('X/generated', self.G(x))
+    # utils.summary_float_image('X/reconstruction', self.F(self.G(x)))
+    # utils.summary_float_image('Y/generated', self.F(y))
+    # utils.summary_float_image('Y/reconstruction', self.G(self.F(y)))
 
-    utils.summary_float_image('X/generated', self.G(x))
-    utils.summary_float_image('X/reconstruction', self.F(self.G(x)))
-    utils.summary_float_image('Y/generated', self.F(y))
-    utils.summary_float_image('Y/reconstruction', self.G(self.F(y)))
-
-    return G_loss, D_Y_loss, F_loss, D_X_loss, fake_y, fake_x
+    return (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y_part, fake_x_part)
 
   def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss):
     def make_optimizer(loss, variables, name='Adam'):

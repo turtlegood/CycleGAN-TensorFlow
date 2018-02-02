@@ -19,10 +19,19 @@ train_old )
         --image_size 48
     ;;
 train_new )
+    if test "$#" -ne 2;
+    then
+        addition=""
+    else 
+        addition="--load_model $2"
+    fi
     python3 train.py \
         --X ~/TomChen/Others/CelebaData/has.tfrecords \
         --Y ~/TomChen/Others/CelebaData/not.tfrecords \
-        --image_size 48
+        --face_model_path ./facenet/data/pretrained/ms.pb \
+        --full_image_size 160 \
+        --eye_image_size 48 \
+        --eye_y 70 \
     ;;
 export )
     for D in `find ./checkpoints/ -mindepth 1 -maxdepth 1 -type d`
