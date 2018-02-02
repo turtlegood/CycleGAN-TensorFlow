@@ -52,7 +52,7 @@ def train():
   print('checkpoints_dir: {}'.format(checkpoints_dir))
   print('''suggested tensorboard command:
 
-  tensorboard --logdir ./{}
+  tensorboard --logdir ~/TomChen/Sync/CycleGAN-TensorFlow/{}
 
   '''.format(checkpoints_dir))
 

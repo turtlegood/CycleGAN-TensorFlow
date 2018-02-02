@@ -12,10 +12,16 @@ build_data )
         --X_output_file ~/TomChen/Others/CelebaData/has.tfrecords \
         --Y_output_file ~/TomChen/Others/CelebaData/not.tfrecords
     ;;
-train )
+train_old )
+    python3 train.py \
+        --X ~/TomChen/Others/CelebaData/old_has.tfrecords \
+        --Y ~/TomChen/Others/CelebaData/old_not.tfrecords \
+        --image_size 48
+    ;;
+train_new )
     python3 train.py \
         --X ~/TomChen/Others/CelebaData/has.tfrecords \
-        --Y ~/TomChen/Others/CelebaData/not.tfrecords
+        --Y ~/TomChen/Others/CelebaData/not.tfrecords \
         --image_size 48
     ;;
 export )

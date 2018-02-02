@@ -1,5 +1,10 @@
 import tensorflow as tf
 
+def noise_layer(input, stddev=0.02):
+  with tf.variable_scope('noise'):
+    noise = tf.random_normal(shape=input.get_shape(), mean=0.0, stddev=stddev, dtype=tf.float32)
+    return input + noise
+
 ## Layers: follow the naming convention used in the original paper
 ### Generator layers
 def c7s1_k(input, k, reuse=False, norm='instance', activation='relu', is_training=True, name='c7s1_k'):

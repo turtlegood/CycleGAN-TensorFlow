@@ -1,6 +1,12 @@
 import tensorflow as tf
 import random
 
+def summary_float_image(name, image, summary_histogram=True, summary_image=True):
+  if summary_image:
+    tf.summary.image(name, batch_convert2int(image), max_outputs=1)
+  if summary_histogram:
+    tf.summary.histogram(name, image)
+
 def convert2int(image):
   """ Transfrom from float tensor ([-1.,1.]) to int image ([0,255])
   """
