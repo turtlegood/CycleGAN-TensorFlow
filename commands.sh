@@ -32,6 +32,7 @@ train_new )
         --full_image_size 160 \
         --eye_image_size 48 \
         --eye_y 70 \
+        $addition
     ;;
 export )
     for D in `find ./checkpoints/ -mindepth 1 -maxdepth 1 -type d`

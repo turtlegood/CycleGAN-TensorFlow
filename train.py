@@ -78,7 +78,7 @@ def train():
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=100) # XXX
 
   with tf.Session(graph=graph) as sess:
     if FLAGS.load_model is not None:

@@ -74,12 +74,27 @@ class CycleGAN:
     self_fake_x_ll, self_fake_x_fr = utils.full_to_eye(self.fake_x_full, self.FLAGS)
     self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y_full, self.FLAGS)
 
-    losses_ll, fakes_ll = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll)
-    losses_fr, fakes_fr = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr)
+    losses_ll, (fake_y_ll, fake_x_ll) = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll)
+    losses_fr, (fake_y_fr, fake_x_fr) = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr)
     losses = [sum(x) / 2 for x in zip(losses_ll, losses_fr)]
-    fakes = [tf.concat([l, r], 0) for l,r in zip(fakes_ll, fakes_fr)]
+    fake_y = utils.eye_to_full(x_full, x_ll, x_fr, fake_y_ll, fake_y_fr, self.FLAGS)    
+    fake_x = utils.eye_to_full(y_full, y_ll, y_fr, fake_x_ll, fake_x_fr, self.FLAGS)    
 
-    return losses, fakes
+    # utils.summary_batch(names=['fake_x', 'fake_y'], locals=locals(), prefix='dbg')
+
+    utils.summary_float_image('X/input', x_full)
+    utils.summary_float_image('Y/input', y_full)
+    utils.summary_float_image('X/generated', fake_y)
+    utils.summary_float_image('Y/generated', fake_x)
+
+    utils.summary_float_image('X_ll/input', x_ll)
+    utils.summary_float_image('Y_ll/input', y_ll)
+    utils.summary_float_image('X_ll/generated', self.G(x_ll))
+    utils.summary_float_image('Y_ll/generated', self.F(y_ll))
+    utils.summary_float_image('X_ll/reconstruction', self.F(self.G(x_ll)))
+    utils.summary_float_image('Y_ll/reconstruction', self.G(self.F(y_ll)))
+
+    return losses, (fake_y, fake_x)
   
   def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part):
     cycle_loss = self.cycle_consistency_loss(self.G, self.F, x_part, y_part)
@@ -107,11 +122,6 @@ class CycleGAN:
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
     # tf.summary.histogram('D_X/true', self.D_X(x))
     # tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
-
-    # utils.summary_float_image('X/generated', self.G(x))
-    # utils.summary_float_image('X/reconstruction', self.F(self.G(x)))
-    # utils.summary_float_image('Y/generated', self.F(y))
-    # utils.summary_float_image('Y/reconstruction', self.G(self.F(y)))
 
     return (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y_part, fake_x_part)
 

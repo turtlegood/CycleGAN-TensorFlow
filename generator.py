@@ -18,6 +18,7 @@ class Generator:
     Returns:
       output: same size as input
     """
+    utils.summary_batch(names=['input'], locals=locals(), prefix='dbg_G')
     with tf.variable_scope(self.name):
       # conv layers
       c7s1_32 = ops.c7s1_k(input, self.ngf, is_training=self.is_training, norm=self.norm,

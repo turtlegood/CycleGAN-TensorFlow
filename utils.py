@@ -26,19 +26,23 @@ def full_to_eye(full_image, FLAGS):
 
   return to_one_eye(full_image, 'left'), to_one_eye(full_image, 'right')
 
-def eye_to_full(ll, fr, FLAGS):
-  def one_eye_to(input, eye_mode):
+def eye_to_full(input_full, input_ll, input_fr, output_ll, output_fr, FLAGS):
+  def one_eye_to(input_part, output_part, eye_mode):
     with tf.name_scope('eye_rev_' + eye_mode):
+      residual = output_part - input_part
       y_start, y_end, x_start, x_end = __eye_crop_box(eye_mode, FLAGS)
       if eye_mode == 'right':
-        input = tf.reverse(input, [2])
+        residual = tf.reverse(residual, [2])
       # pad back
-      padded = tf.pad(input,
+      padded = tf.pad(residual,
           [[0,0], [y_start, FLAGS.full_image_size - y_end], [x_start, FLAGS.full_image_size - x_end], [0,0]], 'CONSTANT')
       return padded
 
-  return one_eye_to(ll, 'left') + one_eye_to(fr, 'right')
+  return input_full + one_eye_to(input_ll, output_ll, 'left') + one_eye_to(input_fr, output_fr, 'right')
 
+def summary_batch(names, locals, prefix):
+  for name in names:
+    summary_float_image('{}/{}'.format(prefix, name), locals[name])
 
 def summary_float_image(name, image, summary_histogram=True, summary_image=True):
   if summary_image:
