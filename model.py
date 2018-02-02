@@ -48,10 +48,12 @@ class CycleGAN:
 
     self.is_training = tf.placeholder_with_default(True, shape=[], name='is_training')
 
-    self.G = Generator('G', self.is_training, ngf=ngf, norm=norm, image_size=self.FLAGS.eye_image_size)
+    self.G = Generator('G', self.is_training,
+        ngf=ngf, norm=norm, image_size=self.FLAGS.eye_image_size, FLAGS=self.FLAGS)
     self.D_Y = Discriminator('D_Y',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
-    self.F = Generator('F', self.is_training, norm=norm, image_size=self.FLAGS.eye_image_size)
+    self.F = Generator('F', self.is_training,
+        norm=norm, image_size=self.FLAGS.eye_image_size, FLAGS=self.FLAGS)
     self.D_X = Discriminator('D_X',
         self.is_training, norm=norm, use_sigmoid=use_sigmoid)
 
@@ -74,29 +76,29 @@ class CycleGAN:
     self_fake_x_ll, self_fake_x_fr = utils.full_to_eye(self.fake_x_full, self.FLAGS)
     self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y_full, self.FLAGS)
 
-    losses_ll, (fake_y_ll, fake_x_ll) = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll)
-    losses_fr, (fake_y_fr, fake_x_fr) = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr)
+    losses_ll, (fake_y_ll, fake_x_ll) = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll, 'left')
+    losses_fr, (fake_y_fr, fake_x_fr) = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr, 'right')
     losses = [sum(x) / 2 for x in zip(losses_ll, losses_fr)]
     fake_y = utils.eye_to_full(x_full, x_ll, x_fr, fake_y_ll, fake_y_fr, self.FLAGS)    
     fake_x = utils.eye_to_full(y_full, y_ll, y_fr, fake_x_ll, fake_x_fr, self.FLAGS)    
 
     # utils.summary_batch(names=['fake_x', 'fake_y'], locals=locals(), prefix='dbg')
 
-    utils.summary_float_image('X/input', x_full)
-    utils.summary_float_image('Y/input', y_full)
-    utils.summary_float_image('X/generated', fake_y)
-    utils.summary_float_image('Y/generated', fake_x)
+    utils.summary_float_image('X/1input', x_full)
+    utils.summary_float_image('Y/1input', y_full)
+    utils.summary_float_image('X/2generated', fake_y)
+    utils.summary_float_image('Y/2generated', fake_x)
 
-    utils.summary_float_image('X_ll/input', x_ll)
-    utils.summary_float_image('Y_ll/input', y_ll)
-    utils.summary_float_image('X_ll/generated', self.G(x_ll))
-    utils.summary_float_image('Y_ll/generated', self.F(y_ll))
-    utils.summary_float_image('X_ll/reconstruction', self.F(self.G(x_ll)))
-    utils.summary_float_image('Y_ll/reconstruction', self.G(self.F(y_ll)))
+    utils.summary_float_image('X_ll/1input', x_ll)
+    utils.summary_float_image('Y_ll/1input', y_ll)
+    utils.summary_float_image('X_ll/2generated', self.G(x_ll))
+    utils.summary_float_image('Y_ll/2generated', self.F(y_ll))
+    utils.summary_float_image('X_ll/3reconstruction', self.F(self.G(x_ll)))
+    utils.summary_float_image('Y_ll/3reconstruction', self.G(self.F(y_ll)))
 
     return losses, (fake_y, fake_x)
   
-  def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part):
+  def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part, eye_mode):
     cycle_loss = self.cycle_consistency_loss(self.G, self.F, x_part, y_part)
 
     # X -> Y
@@ -111,11 +113,12 @@ class CycleGAN:
     F_loss = F_gan_loss + cycle_loss
     D_X_loss = self.discriminator_loss(self.D_X, x_part, self_fake_x_part, use_lsgan=self.use_lsgan)
 
-    tf.summary.scalar('loss_ll/G', G_gan_loss)
-    tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
-    tf.summary.scalar('loss_ll/F', F_gan_loss)
-    tf.summary.scalar('loss_ll/D_X', D_X_loss)
-    tf.summary.scalar('loss_ll/cycle', cycle_loss)
+    if eye_mode == 'left':
+      tf.summary.scalar('loss_ll/G', G_gan_loss)
+      tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
+      tf.summary.scalar('loss_ll/F', F_gan_loss)
+      tf.summary.scalar('loss_ll/D_X', D_X_loss)
+      tf.summary.scalar('loss_ll/cycle', cycle_loss)
 
     # summary
     # tf.summary.histogram('D_Y/true', self.D_Y(y))

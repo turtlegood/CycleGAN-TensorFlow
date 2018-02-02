@@ -18,7 +18,7 @@ class Discriminator:
       output: 4D tensor batch_size x out_size x out_size x 1 (default 1x5x5x1)
               filled with 0.9 if real, 0.0 if fake
     """
-    utils.summary_batch(names=['input'], locals=locals(), prefix='dbg_D')
+    # utils.summary_batch(names=['input'], locals=locals(), prefix='dbg_D')
     with tf.variable_scope(self.name):
       # add some noise
       input_with_noise = ops.noise_layer(input)

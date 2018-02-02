@@ -3,13 +3,14 @@ import ops
 import utils
 
 class Generator:
-  def __init__(self, name, is_training, ngf=64, norm='instance', image_size=128):
+  def __init__(self, name, is_training, ngf=64, norm='instance', image_size=128, FLAGS=None):
     self.name = name
     self.reuse = False
     self.ngf = ngf
     self.norm = norm
     self.is_training = is_training
     self.image_size = image_size
+    self.FLAGS = FLAGS
 
   def __call__(self, input):
     """
@@ -18,7 +19,7 @@ class Generator:
     Returns:
       output: same size as input
     """
-    utils.summary_batch(names=['input'], locals=locals(), prefix='dbg_G')
+    # utils.summary_batch(names=['input'], locals=locals(), prefix='dbg_G')
     with tf.variable_scope(self.name):
       # conv layers
       c7s1_32 = ops.c7s1_k(input, self.ngf, is_training=self.is_training, norm=self.norm,
@@ -35,11 +36,21 @@ class Generator:
         # 9 blocks for higher resolution
         res_output = ops.n_res_blocks(d128, reuse=self.reuse, n=9)      # (?, w/4, h/4, 128)
 
+      if self.FLAGS.use_G_skip_conn:
+        res_output = res_output + d128
+
       # fractional-strided convolution
       u64 = ops.uk(res_output, 2*self.ngf, is_training=self.is_training, norm=self.norm,
           reuse=self.reuse, name='u64')                                 # (?, w/2, h/2, 64)
+      
+      if self.FLAGS.use_G_skip_conn:
+        u64 = u64 + d64
+
       u32 = ops.uk(u64, self.ngf, is_training=self.is_training, norm=self.norm,
           reuse=self.reuse, name='u32', output_size=self.image_size)         # (?, w, h, 32)
+
+      if self.FLAGS.use_G_skip_conn:
+        u32 = u32 + c7s1_32
 
       # conv layer
       # Note: the paper said that ReLU and _norm were used

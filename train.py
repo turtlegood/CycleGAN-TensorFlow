@@ -12,6 +12,7 @@ tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_y', 0, '')
+tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
                      'use lsgan (mean squared error) or cross entropy loss, default: True')
 tf.flags.DEFINE_string('norm', 'instance',

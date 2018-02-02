@@ -32,6 +32,7 @@ train_new )
         --full_image_size 160 \
         --eye_image_size 48 \
         --eye_y 70 \
+        --use_G_skip_conn True \
         $addition
     ;;
 export )
