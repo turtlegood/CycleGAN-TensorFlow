@@ -15,27 +15,41 @@ import utils
 
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_string('checkpoint_dir', '', 'checkpoints directory path')
-tf.flags.DEFINE_string('XtoY_model', 'apple2orange.pb', 'XtoY model name, default: apple2orange.pb')
-tf.flags.DEFINE_string('YtoX_model', 'orange2apple.pb', 'YtoX model name, default: orange2apple.pb')
-tf.flags.DEFINE_integer('image_size', '256', 'image size, default: 256')
+tf.flags.DEFINE_string('name', '', '')
+tf.flags.DEFINE_integer('full_image_size', 256, '')
+tf.flags.DEFINE_integer('eye_image_size', 256, '')
+tf.flags.DEFINE_string('face_model_path', '', '')
+tf.flags.DEFINE_integer('eye_y', '', '')
 tf.flags.DEFINE_integer('ngf', 64,
                         'number of gen filters in first conv layer, default: 64')
 tf.flags.DEFINE_string('norm', 'instance',
                        '[instance, batch] use instance norm or batch norm, default: instance')
+tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
+tf.flags.DEFINE_float('lambda_face', 1.0, '')
 
-def export_graph(model_name, XtoY=True):
+# def export_graph(model_name, XtoY=True):
+def export_graph(XtoY):
   graph = tf.Graph()
 
   with graph.as_default():
-    cycle_gan = CycleGAN(ngf=FLAGS.ngf, norm=FLAGS.norm, image_size=FLAGS.image_size)
+    cycle_gan = CycleGAN(
+        FLAGS=FLAGS,
+        ngf=FLAGS.ngf,
+        norm=FLAGS.norm
+    )
 
-    input_image = tf.placeholder(tf.float32, shape=[FLAGS.image_size, FLAGS.image_size, 3], name='input_image')
+    input_image = tf.placeholder(tf.float32,
+      shape=[FLAGS.full_image_size, FLAGS.full_image_size, 3], name='input_image')
+
     cycle_gan.model()
-    if XtoY:
-      output_image = cycle_gan.G.sample(tf.expand_dims(input_image, 0))
-    else:
-      output_image = cycle_gan.F.sample(tf.expand_dims(input_image, 0))
+    network = cycle_gan.G if XtoY else cycle_gan.F
+
+    input_expanded = tf.expand_dims(input_image, 0)
+    input_ll, input_fr = utils.full_to_eye(input_expanded, FLAGS)
+    output_ll, output_fr = cycle_gan.G(input_ll), cycle_gan.G(input_fr)
+    output_full = utils.eye_to_full(input_expanded, input_ll, input_fr, output_ll, output_fr, FLAGS)
+    output_int = utils.batch_convert2int(output_full)
+    output_image = tf.image.encode_jpeg(tf.squeeze(output_int, [0]))
 
     output_image = tf.identity(output_image, name='output_image')
     restore_saver = tf.train.Saver()
@@ -43,18 +57,26 @@ def export_graph(model_name, XtoY=True):
 
   with tf.Session(graph=graph) as sess:
     sess.run(tf.global_variables_initializer())
-    latest_ckpt = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
-    restore_saver.restore(sess, latest_ckpt)
-    output_graph_def = tf.graph_util.convert_variables_to_constants(
-        sess, graph.as_graph_def(), [output_image.op.name])
-
-    tf.train.write_graph(output_graph_def, 'pretrained', model_name, as_text=False)
-
+    # latest_ckpt = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
+    checkpoint_dir = 'checkpoints/' + FLAGS.name
+    all_ckpt_list = tf.train.get_checkpoint_state(checkpoint_dir).all_model_checkpoint_paths
+    for ckpt in all_ckpt_list:
+      print('exporting ckpt=%s'%ckpt)
+      model_dir = 'pretrained/' + FLAGS.name
+      model_name = os.path.basename(ckpt) + '.pb'
+      restore_saver.restore(sess, ckpt)
+      output_graph_def = tf.graph_util.convert_variables_to_constants(
+          sess, graph.as_graph_def(), [output_image.op.name])
+      tf.train.write_graph(output_graph_def, model_dir, model_name, as_text=False)
+  
 def main(unused_argv):
-  print('Export XtoY model...')
-  export_graph(FLAGS.XtoY_model, XtoY=True)
-  print('Export YtoX model...')
-  export_graph(FLAGS.YtoX_model, XtoY=False)
+  export_graph(XtoY=True)
+  # print('Export XtoY model...')
+  # export_graph(FLAGS.XtoY_model, XtoY=True)
+  # print('Does not export YtoX model')
+  # print('Export YtoX model...')
+  # export_graph(FLAGS.YtoX_model, XtoY=False)
 
 if __name__ == '__main__':
   tf.app.run()
+

@@ -12,7 +12,6 @@ import utils
 __facenet_loss_called = False
 def facenet_loss(tensor_concated, concat_size, FLAGS, name='face_loss'):
     global __facenet_loss_called; assert __facenet_loss_called == False; __facenet_loss_called = True
-    print('facenet_loss lambda_face=%f, face_model_path=%s, full_image_size=%d'%(FLAGS.lambda_face, FLAGS.face_model_path, FLAGS.full_image_size))
     with tf.name_scope(name):
         input_map = {"input:0": tensor_concated, "phase_train:0": tf.constant(False)}
 
