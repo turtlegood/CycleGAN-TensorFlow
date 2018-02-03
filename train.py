@@ -8,6 +8,7 @@ from utils import ImagePool
 
 FLAGS = tf.flags.FLAGS
 
+tf.flags.DEFINE_bool('formal', False, '')
 tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
@@ -43,12 +44,13 @@ tf.flags.DEFINE_string('train_name', None,
 
 
 def train():
+  checkpoints_dir_prefix = 'checkpoints/' if FLAGS.formal else 'checkpoints_informal/'
   if FLAGS.load_model is not None:
-    checkpoints_dir = "checkpoints/" + FLAGS.load_model.lstrip("checkpoints/")
+    checkpoints_dir = checkpoints_dir_prefix + FLAGS.load_model.lstrip(checkpoints_dir_prefix)
   else:
     current_time = datetime.now().strftime("%Y%m%d-%H%M")
     postfix = ('-' + FLAGS.train_name) if FLAGS.train_name is not None else ''
-    checkpoints_dir = "checkpoints/{}{}".format(current_time, postfix)
+    checkpoints_dir = "{}{}{}".format(checkpoints_dir_prefix, current_time, postfix)
     try:
       os.makedirs(checkpoints_dir)
     except os.error:
