@@ -49,6 +49,13 @@ export )
             --image_size 48
     done
     ;;
+log_single )
+    tensorboard --logdir /home/rail/TomChen/Sync/CycleGAN-TensorFlow/checkpoints/$2
+    ;;
+log_multi )
+    logdir=$(echo $2 | sed 's,:,:/home/rail/TomChen/Sync/CycleGAN-TensorFlow/checkpoints/,g')
+    tensorboard --logdir $logdir
+    ;;
 * )
     echo "Wrong input"
 esac
