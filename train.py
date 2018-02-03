@@ -63,6 +63,10 @@ def train():
 
   '''.format(checkpoints_dir))
 
+  # save cfg
+  with open(checkpoints_dir+'/FLAGS.txt', 'w') as f:
+    f.write(str(FLAGS.__flags))
+
   graph = tf.Graph()
   with graph.as_default():
     cycle_gan = CycleGAN(
