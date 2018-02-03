@@ -28,11 +28,13 @@ train_new )
     python3 train.py \
         --X ~/TomChen/Others/CelebaData/has.tfrecords \
         --Y ~/TomChen/Others/CelebaData/not.tfrecords \
-        --face_model_path ./facenet/data/pretrained/ms.pb \
+        --face_model_path ~/TomChen/Others/CelebaData/facenet_ms.pb \
         --full_image_size 160 \
         --eye_image_size 48 \
         --eye_y 70 \
         --use_G_skip_conn True \
+        --lambda_face 0.01 \
+        --batch_size 1 \
         $addition
     ;;
 export )

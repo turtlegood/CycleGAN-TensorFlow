@@ -4,6 +4,7 @@ import utils
 from reader import Reader
 from discriminator import Discriminator
 from generator import Generator
+import facenet_loss
 
 REAL_LABEL = 0.9
 
@@ -78,16 +79,24 @@ class CycleGAN:
 
     losses_ll, (fake_y_ll, fake_x_ll) = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll, 'left')
     losses_fr, (fake_y_fr, fake_x_fr) = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr, 'right')
-    losses = [sum(x) / 2 for x in zip(losses_ll, losses_fr)]
-    fake_y = utils.eye_to_full(x_full, x_ll, x_fr, fake_y_ll, fake_y_fr, self.FLAGS)    
-    fake_x = utils.eye_to_full(y_full, y_ll, y_fr, fake_x_ll, fake_x_fr, self.FLAGS)    
+    fake_y_full = utils.eye_to_full(x_full, x_ll, x_fr, fake_y_ll, fake_y_fr, self.FLAGS)    
+    fake_x_full = utils.eye_to_full(y_full, y_ll, y_fr, fake_x_ll, fake_x_fr, self.FLAGS)    
 
-    # utils.summary_batch(names=['fake_x', 'fake_y'], locals=locals(), prefix='dbg')
+    # face_loss
+    G_face_loss, F_face_loss = facenet_loss.facenet_loss(
+        tf.concat([x_full, fake_y_full, y_full, fake_x_full], 0), concat_size=2, FLAGS=self.FLAGS)
+
+    losses = tuple(sum(x) / 2 for x in zip(losses_ll, losses_fr)) + (G_face_loss, F_face_loss)
+
+    # utils.summary_batch(names=['fake_x_full', 'fake_y_full'], locals=locals(), prefix='dbg')
+
+    tf.summary.scalar('loss/G_face', G_face_loss)
+    tf.summary.scalar('loss/F_face', F_face_loss)
 
     utils.summary_float_image('X/1input', x_full)
     utils.summary_float_image('Y/1input', y_full)
-    utils.summary_float_image('X/2generated', fake_y)
-    utils.summary_float_image('Y/2generated', fake_x)
+    utils.summary_float_image('X/2generated', fake_y_full)
+    utils.summary_float_image('Y/2generated', fake_x_full)
 
     utils.summary_float_image('X_ll/1input', x_ll)
     utils.summary_float_image('Y_ll/1input', y_ll)
@@ -96,7 +105,7 @@ class CycleGAN:
     utils.summary_float_image('X_ll/3reconstruction', self.F(self.G(x_ll)))
     utils.summary_float_image('Y_ll/3reconstruction', self.G(self.F(y_ll)))
 
-    return losses, (fake_y, fake_x)
+    return losses, (fake_y_full, fake_x_full)
   
   def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part, eye_mode):
     cycle_loss = self.cycle_consistency_loss(self.G, self.F, x_part, y_part)
@@ -128,7 +137,7 @@ class CycleGAN:
 
     return (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y_part, fake_x_part)
 
-  def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss):
+  def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss):
     def make_optimizer(loss, variables, name='Adam'):
       """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
           and a linearly decaying rate that goes to zero over the next 100k steps
@@ -161,8 +170,10 @@ class CycleGAN:
     D_Y_optimizer = make_optimizer(D_Y_loss, self.D_Y.variables, name='Adam_D_Y')
     F_optimizer =  make_optimizer(F_loss, self.F.variables, name='Adam_F')
     D_X_optimizer = make_optimizer(D_X_loss, self.D_X.variables, name='Adam_D_X')
+    G_face_optimizer = make_optimizer(G_face_loss, self.G.variables, name='Adam_G_face')
+    F_face_optimizer = make_optimizer(F_face_loss, self.F.variables, name='Adam_F_face')
 
-    with tf.control_dependencies([G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer]):
+    with tf.control_dependencies([G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer, G_face_optimizer, F_face_optimizer]):
       return tf.no_op(name='optimizers')
 
   def discriminator_loss(self, D, y, fake_y, use_lsgan=True):
