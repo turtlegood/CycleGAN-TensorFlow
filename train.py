@@ -15,6 +15,7 @@ tf.flags.DEFINE_integer('full_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_y', 0, '')
 tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
+tf.flags.DEFINE_bool('use_G_resi', False, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
                      'use lsgan (mean squared error) or cross entropy loss, default: True')
 tf.flags.DEFINE_string('norm', 'instance',
@@ -24,8 +25,12 @@ tf.flags.DEFINE_integer('lambda1', 10.0,
 tf.flags.DEFINE_integer('lambda2', 10.0,
                         'weight for backward cycle loss (Y->X->Y), default: 10.0')
 tf.flags.DEFINE_float('lambda_face', 1.0, '')
-tf.flags.DEFINE_float('learning_rate', 2e-4,
-                      'initial learning rate for Adam, default: 0.0002')
+tf.flags.DEFINE_float('lambda_pix', 1.0, '')
+tf.flags.DEFINE_float('lambda_gan', 1.0, '')
+tf.flags.DEFINE_float('lr_G', -1, '')
+tf.flags.DEFINE_float('lr_D', -1, '')
+tf.flags.DEFINE_float('lr_face', -1, '')
+tf.flags.DEFINE_float('lr_pix', -1, '')
 tf.flags.DEFINE_float('beta1', 0.5,
                       'momentum term of Adam, default: 0.5')
 tf.flags.DEFINE_float('pool_size', 50,
@@ -78,13 +83,12 @@ def train():
         norm=FLAGS.norm,
         lambda1=FLAGS.lambda1,
         lambda2=FLAGS.lambda2,
-        learning_rate=FLAGS.learning_rate,
         beta1=FLAGS.beta1,
         ngf=FLAGS.ngf
     )
-    (G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss), (fake_y, fake_x) = cycle_gan.model()
+    (G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss), (fake_y, fake_x) = cycle_gan.model()
     optimizers = cycle_gan.optimize(
-        G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss)
+        G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss)
 
     summary_op = tf.summary.merge_all()
     train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
@@ -144,8 +148,11 @@ def train():
     except Exception as e:
       coord.request_stop(e)
     finally:
-      save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)
-      logging.info("Model saved in file: %s" % save_path)
+      if FLAGS.formal:
+        save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)
+        logging.info("Model saved in file: %s" % save_path)
+      else:
+        logging.info("Model not saved since it is informal")
       # When done, ask the threads to stop.
       coord.request_stop()
       coord.join(threads)

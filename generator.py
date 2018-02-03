@@ -56,10 +56,12 @@ class Generator:
       # Note: the paper said that ReLU and _norm were used
       # but actually tanh was used and no _norm here
       # XXX: Try to do a residual thing :/
-      # output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
-      #     activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
-      output = ops.c7s1_k(u32, 3, norm=None,
-          activation='tanh', reuse=self.reuse, name='output')           # (?, w, h, 3)
+      if self.FLAGS.use_G_resi:
+        output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
+            activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
+      else:
+        output = ops.c7s1_k(u32, 3, norm=None,
+            activation='tanh', reuse=self.reuse, name='output')           # (?, w, h, 3)
     # set reuse=True for next call
     self.reuse = True
     self.variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=self.name)

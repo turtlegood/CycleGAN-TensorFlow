@@ -4,8 +4,17 @@ common_arg="\
         --full_image_size $full_image_size \
         --eye_image_size 48 \
         --eye_y 70 \
+        --lambda1 10 \
+        --lambda2 10 \
         --lambda_face 0 \
-        --use_G_skip_conn False"
+        --lambda_pix 0 \
+        --lambda_gan 1 \
+        --use_G_skip_conn False \
+        --use_G_resi False \
+        --lr_G 1e-4 \
+        --lr_D 1e-5 \
+        --lr_face 2e-5 \
+        --lr_pix 2e-5"
 
 # $1 => default value; $2 => value
 function chkpt_dir_prefix {
@@ -60,14 +69,14 @@ train )
     then
         addition=""
     else 
-        if [ "$3" == "formal" ]
+        if [ "$2" == "formal" ]
         then
             echo 'formal'
             addition="--formal True"
-        else
-            chkpt=$(chkpt_from_idx $2 $3)
-            echo 'chkpt' $chkpt
-            addition="--load_model $chkpt"
+        # else
+            # chkpt=$(chkpt_from_idx $2 $3)
+            # echo 'chkpt' $chkpt
+            # addition="--load_model $chkpt"
         fi
     fi
     cmd="python3 train.py \
@@ -105,7 +114,7 @@ log )
     echo "cmd" $cmd; $cmd
     ;;
 log_multi )
-    logdir=$(echo $2 | sed 's,:,:/home/rail/TomChen/Sync/CycleGAN-TensorFlow/checkpoints/,g')
+    logdir=$(echo $2 | sed 's,:,:/home/rail/TomChen/Sync/CycleGAN-TensorFlow/checkpoints_informal/,g')
     tensorboard --logdir $logdir
     ;;
 * )

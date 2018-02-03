@@ -40,9 +40,9 @@ def facenet_loss(tensor_concated, concat_size, FLAGS, name='face_loss'):
             x_i_emb, fake_y_i_emb = tf.split(splitted, num_or_size_splits=2)
             delta_i_emb = fake_y_i_emb - x_i_emb
             norm = tf.norm(delta_i_emb, 2, axis=1)
-            multiplied_norm = FLAGS.lambda_face * norm
-            reduced_norm = tf.reduce_mean(multiplied_norm)
-            reduced_norm_tuple += (reduced_norm,)
+            reduced_norm = tf.reduce_mean(norm)
+            multiplied_norm = FLAGS.lambda_face * reduced_norm
+            reduced_norm_tuple += (multiplied_norm,)
             # print(splitted.get_shape(), x_i_emb.get_shape(), fake_y_i_emb.get_shape())
 
         return reduced_norm_tuple
