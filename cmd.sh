@@ -6,11 +6,12 @@ common_arg="\
         --eye_y 70 \
         --lambda1 10 \
         --lambda2 10 \
-        --lambda_face 0 \
-        --lambda_pix 1e-6 \
-        --lambda_gan 0 \
+        --lambda_face 1e-2 \
+        --lambda_pix 0 \
+        --lambda_gan 1 \
         --use_G_skip_conn False \
         --use_G_resi False \
+        --use_face_prewhitten True \
         --lr_G 1e-4 \
         --lr_D 1e-5 \
         --lr_face 2e-5 \
@@ -73,10 +74,11 @@ train )
         then
             echo 'formal'
             addition="--formal True"
-        # else
+        else
             # chkpt=$(chkpt_from_idx $2 $3)
-            # echo 'chkpt' $chkpt
-            # addition="--load_model $chkpt"
+            chkpt="$2"
+            echo 'chkpt' $chkpt
+            addition="--load_model $chkpt"
         fi
     fi
     cmd="python3 train.py \

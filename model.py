@@ -148,6 +148,8 @@ class CycleGAN:
     utils.summary_float_image('Y_concated/2_generated', fake_x_concated)
     utils.summary_float_image('X_concated/3_reconstruction', cycle_x_concated)
     utils.summary_float_image('Y_concated/3_reconstruction', cycle_y_concated)
+    utils.summary_float_image('X_concated/4_residual', fake_y_concated - x_concated)
+    utils.summary_float_image('Y_concated/4_residual', fake_x_concated - y_concated)
 
     return  (G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss), \
             (fake_y_full, fake_x_full)

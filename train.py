@@ -14,6 +14,7 @@ tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_y', 0, '')
+tf.flags.DEFINE_bool('use_faceloss_prewhitten', False, '')
 tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
 tf.flags.DEFINE_bool('use_G_resi', False, '')
 tf.flags.DEFINE_bool('use_lsgan', True,
@@ -51,7 +52,8 @@ tf.flags.DEFINE_string('train_name', None,
 def train():
   checkpoints_dir_prefix = 'checkpoints/' if FLAGS.formal else 'checkpoints_informal/'
   if FLAGS.load_model is not None:
-    checkpoints_dir = checkpoints_dir_prefix + FLAGS.load_model.lstrip(checkpoints_dir_prefix)
+    # checkpoints_dir = checkpoints_dir_prefix + FLAGS.load_model.lstrip(checkpoints_dir_prefix)
+    checkpoints_dir = checkpoints_dir_prefix + FLAGS.load_model
   else:
     current_time = datetime.now().strftime("%Y%m%d-%H%M")
     postfix = ('-' + FLAGS.train_name) if FLAGS.train_name is not None else ''
@@ -102,7 +104,7 @@ def train():
       meta_graph_path = checkpoint.model_checkpoint_path + ".meta"
       restore = tf.train.import_meta_graph(meta_graph_path)
       restore.restore(sess, tf.train.latest_checkpoint(checkpoints_dir))
-      step = int(meta_graph_path.split("-")[2].split(".")[0])
+      step = int(meta_graph_path.split("-")[-1].split(".")[0])
     else:
       sess.run(tf.global_variables_initializer())
       step = 0

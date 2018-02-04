@@ -59,9 +59,10 @@ def summary_batch(names, locals, prefix):
   for name in names:
     summary_float_image('{}/{}'.format(prefix, name), locals[name])
 
-def summary_float_image(name, image, summary_histogram=True, summary_image=True, collections=['summaries_secondary']):
+def summary_float_image(name, image, summary_histogram=True, \
+      summary_image=True, collections=['summaries_secondary'], max_outputs=1):
   if summary_image:
-    tf.summary.image(name, batch_convert2int(image), max_outputs=1, collections=collections)
+    tf.summary.image(name, batch_convert2int(image), max_outputs=max_outputs, collections=collections)
   if summary_histogram:
     tf.summary.histogram(name, image, collections=collections)
 

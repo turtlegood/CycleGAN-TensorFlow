@@ -13,7 +13,16 @@ __facenet_loss_called = False
 def facenet_loss(tensor_concated, concat_size, FLAGS, name='face_loss'):
     global __facenet_loss_called; assert __facenet_loss_called == False; __facenet_loss_called = True
     with tf.name_scope(name):
-        input_map = {"input:0": tensor_concated, "phase_train:0": tf.constant(False)}
+        tensor_prewhittened = __prewhitten_4d(tensor_concated, FLAGS.full_image_size)
+
+        # utils.summary_float_image('dbg/not_pre', tensor_concated, max_outputs=100)
+        # utils.summary_float_image('dbg/prewhittened', tensor_prewhittened, max_outputs=100)
+        
+        if FLAGS.use_faceloss_prewhitten:
+            input_tensor = tensor_prewhittened
+        else:
+            input_tensor = tensor_concated
+        input_map = {"input:0": input_tensor, "phase_train:0": tf.constant(False)}
 
         # facenet.load_model(args.model)
         model_exp = os.path.expanduser(FLAGS.face_model_path)
@@ -47,15 +56,18 @@ def facenet_loss(tensor_concated, concat_size, FLAGS, name='face_loss'):
 
         return reduced_norm_tuple
 
-# def prewhitten(input, full_image_size):
-#     mean, var = tf.nn.moments(input, [0, 1, 2])
-#     std = tf.sqrt(var)
-#     # TODO more flexible, not requiring full_image_size
-#     std_adj = tf.maximum(std,
-#             1.0/math.sqrt(full_image_size * full_image_size * 3))
-#     y = tf.multiply(tf.subtract(input, mean), 1/std_adj)
-#     # mean = np.mean(x)
-#     # std = np.std(x)
-#     # std_adj = np.maximum(std, 1.0/np.sqrt(x.size))
-#     # y = np.multiply(np.subtract(x, mean), 1/std_adj)
-#     return y  
+def __prewhitten_4d(input, full_image_size):
+    return tf.map_fn(lambda input_3d: __prewhitten_3d(input_3d, full_image_size), \
+            input)
+
+# input [full_image_size, full_image_size, depth] only! no 4D tensor
+def __prewhitten_3d(input, full_image_size):
+    mean, var = tf.nn.moments(input, [0, 1, 2])
+    std = tf.sqrt(var)
+    std_adj = tf.maximum(std, 1.0/math.sqrt(full_image_size * full_image_size * 3))
+    output = tf.multiply(tf.subtract(input, mean), 1/std_adj)
+    return output
+    # mean = np.mean(x)
+    # std = np.std(x)
+    # std_adj = np.maximum(std, 1.0/np.sqrt(x.size))
+    # y = np.multiply(np.subtract(x, mean), 1/std_adj)
