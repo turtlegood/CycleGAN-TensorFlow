@@ -62,6 +62,8 @@ class CycleGAN:
         shape=[batch_size, self.FLAGS.full_image_size, self.FLAGS.full_image_size, 3])
 
   def model(self):
+    ### image reading ###
+
     X_reader = Reader(self.X_train_file, name='X',
         image_size=self.FLAGS.full_image_size, batch_size=self.batch_size)
     Y_reader = Reader(self.Y_train_file, name='Y',
@@ -70,15 +72,34 @@ class CycleGAN:
     x_full = X_reader.feed()
     y_full = Y_reader.feed()
 
-    x_ll, x_fr = utils.full_to_eye(x_full, self.FLAGS)
-    y_ll, y_fr = utils.full_to_eye(y_full, self.FLAGS)
-    self_fake_x_ll, self_fake_x_fr = utils.full_to_eye(self.fake_x_full, self.FLAGS)
-    self_fake_y_ll, self_fake_y_fr = utils.full_to_eye(self.fake_y_full, self.FLAGS)
+    ### image processing ###
 
-    losses_ll, (fake_y_ll, fake_x_ll) = self.model_one_eye(x_ll, y_ll, self_fake_x_ll, self_fake_y_ll, 'left')
-    losses_fr, (fake_y_fr, fake_x_fr) = self.model_one_eye(x_fr, y_fr, self_fake_x_fr, self_fake_y_fr, 'right')
-    fake_y_full = utils.eye_to_full(x_full, x_ll, x_fr, fake_y_ll, fake_y_fr, self.FLAGS)    
-    fake_x_full = utils.eye_to_full(y_full, y_ll, y_fr, fake_x_ll, fake_x_fr, self.FLAGS)    
+    x_concated = utils.full_to_eye_concated(x_full, self.FLAGS)
+    y_concated = utils.full_to_eye_concated(y_full, self.FLAGS)
+    self_fake_x_concated = utils.full_to_eye_concated(self.fake_x_full, self.FLAGS)
+    self_fake_y_concated = utils.full_to_eye_concated(self.fake_y_full, self.FLAGS)
+
+    fake_y_concated = self.G(x_concated)
+    fake_x_concated = self.F(y_concated)
+    cycle_x_concated = self.F(fake_y_concated)
+    cycle_y_concated = self.G(fake_x_concated)
+
+    fake_y_full = utils.eye_concated_to_full(x_full, x_concated, fake_y_concated, self.FLAGS)    
+    fake_x_full = utils.eye_concated_to_full(y_full, y_concated, fake_x_concated, self.FLAGS)    
+
+    ### losses ###
+
+    cycle_loss = self.cycle_consistency_loss(x_concated, y_concated, cycle_x_concated, cycle_y_concated)
+
+    # X -> Y
+    G_gan_loss = self.generator_loss(self.D_Y, fake_y_concated, use_lsgan=self.use_lsgan)
+    G_loss =  G_gan_loss + cycle_loss
+    D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated, use_lsgan=self.use_lsgan)
+
+    # Y -> X
+    F_gan_loss = self.generator_loss(self.D_X, fake_x_concated, use_lsgan=self.use_lsgan)
+    F_loss = F_gan_loss + cycle_loss
+    D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated, use_lsgan=self.use_lsgan)
 
     # face_loss
     G_face_loss, F_face_loss = facenet_loss.facenet_loss(
@@ -88,63 +109,43 @@ class CycleGAN:
     G_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_y_full - x_full, 2)
     F_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_x_full - y_full, 2)
 
-    utils.summary_float_image('dbg/delta_fake_y_and_x', fake_y_full - x_full)
-
-    losses = \
-      tuple(sum(x) / 2 for x in zip(losses_ll, losses_fr)) + \
-      (G_face_loss, F_face_loss) + (G_pix_loss, F_pix_loss)
+    ### summaries ###
 
     # utils.summary_batch(names=['fake_x_full', 'fake_y_full'], locals=locals(), prefix='dbg')
+    # utils.summary_float_image('dbg/delta_fake_y_and_x', fake_y_full - x_full)
 
+    tf.summary.scalar('loss_ll/G', G_gan_loss)
+    tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
+    tf.summary.scalar('loss_ll/F', F_gan_loss)
+    tf.summary.scalar('loss_ll/D_X', D_X_loss)
+    tf.summary.scalar('loss_ll/cycle', cycle_loss)
     tf.summary.scalar('loss/G_face', G_face_loss)
     tf.summary.scalar('loss/F_face', F_face_loss)
     tf.summary.scalar('loss/G_pix', G_pix_loss)
     tf.summary.scalar('loss/F_pix', F_pix_loss)
 
-    utils.summary_float_image('X/1input', x_full)
-    utils.summary_float_image('Y/1input', y_full)
-    utils.summary_float_image('X/2generated', fake_y_full)
-    utils.summary_float_image('Y/2generated', fake_x_full)
-
-    utils.summary_float_image('X_ll/1input', x_ll)
-    utils.summary_float_image('Y_ll/1input', y_ll)
-    utils.summary_float_image('X_ll/2generated', self.G(x_ll))
-    utils.summary_float_image('Y_ll/2generated', self.F(y_ll))
-    utils.summary_float_image('X_ll/3reconstruction', self.F(self.G(x_ll)))
-    utils.summary_float_image('Y_ll/3reconstruction', self.G(self.F(y_ll)))
-
-    return losses, (fake_y_full, fake_x_full)
-  
-  def model_one_eye(self, x_part, y_part, self_fake_x_part, self_fake_y_part, eye_mode):
-    cycle_loss = self.cycle_consistency_loss(self.G, self.F, x_part, y_part)
-
-    # X -> Y
-    fake_y_part = self.G(x_part)
-    G_gan_loss = self.generator_loss(self.D_Y, fake_y_part, use_lsgan=self.use_lsgan)
-    G_loss =  G_gan_loss + cycle_loss
-    D_Y_loss = self.discriminator_loss(self.D_Y, y_part, self_fake_y_part, use_lsgan=self.use_lsgan)
-
-    # Y -> X
-    fake_x_part = self.F(y_part)
-    F_gan_loss = self.generator_loss(self.D_X, fake_x_part, use_lsgan=self.use_lsgan)
-    F_loss = F_gan_loss + cycle_loss
-    D_X_loss = self.discriminator_loss(self.D_X, x_part, self_fake_x_part, use_lsgan=self.use_lsgan)
-
-    if eye_mode == 'left':
-      tf.summary.scalar('loss_ll/G', G_gan_loss)
-      tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
-      tf.summary.scalar('loss_ll/F', F_gan_loss)
-      tf.summary.scalar('loss_ll/D_X', D_X_loss)
-      tf.summary.scalar('loss_ll/cycle', cycle_loss)
-
-    # summary
     # tf.summary.histogram('D_Y/true', self.D_Y(y))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
     # tf.summary.histogram('D_X/true', self.D_X(x))
     # tf.summary.histogram('D_X/fake', self.D_X(self.F(y)))
 
-    return (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y_part, fake_x_part)
+    utils.summary_float_image('X/1_input', x_full)
+    utils.summary_float_image('Y/1_input', y_full)
+    utils.summary_float_image('X/2_generated', fake_y_full)
+    utils.summary_float_image('Y/2_generated', fake_x_full)
+    # utils.summary_float_image('X_ll/3reconstruction', self.F(self.G(x_ll)))
+    # utils.summary_float_image('Y_ll/3reconstruction', self.G(self.F(y_ll)))
 
+    utils.summary_float_image('X_concated/1_input', x_concated)
+    utils.summary_float_image('Y_concated/1_input', y_concated)
+    utils.summary_float_image('X_concated/2_generated', fake_y_concated)
+    utils.summary_float_image('Y_concated/2_generated', fake_x_concated)
+    utils.summary_float_image('X_concated/3_reconstruction', cycle_x_concated)
+    utils.summary_float_image('Y_concated/3_reconstruction', cycle_y_concated)
+
+    return  (G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss), \
+            (fake_y_full, fake_x_full)
+  
   def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss):
     def make_optimizer(loss, variables, lr, name='Adam'):
       """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
@@ -219,10 +220,12 @@ class CycleGAN:
     loss = self.FLAGS.lambda_gan * loss
     return loss
 
-  def cycle_consistency_loss(self, G, F, x, y):
+  def cycle_consistency_loss(self, x, y, cycle_x, cycle_y):
     """ cycle consistency loss (L1 norm)
     """
-    forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
-    backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
+    forward_loss = tf.reduce_mean(tf.abs(cycle_x-x))
+    backward_loss = tf.reduce_mean(tf.abs(cycle_y-y))
+    # forward_loss = tf.reduce_mean(tf.abs(F(G(x))-x))
+    # backward_loss = tf.reduce_mean(tf.abs(G(F(y))-y))
     loss = self.lambda1*forward_loss + self.lambda2*backward_loss
     return loss

@@ -26,6 +26,10 @@ def full_to_eye(full_image, FLAGS):
 
   return to_one_eye(full_image, 'left'), to_one_eye(full_image, 'right')
 
+def full_to_eye_concated(full_image, FLAGS):
+  ll, fr = full_to_eye(full_image, FLAGS)
+  return tf.concat([ll, fr], axis=0)
+
 def eye_to_full(input_full, input_ll, input_fr, output_ll, output_fr, FLAGS):
   def one_eye_to(input_part, output_part, eye_mode):
     with tf.name_scope('eye_rev_' + eye_mode):
@@ -39,6 +43,11 @@ def eye_to_full(input_full, input_ll, input_fr, output_ll, output_fr, FLAGS):
       return padded
 
   return input_full + one_eye_to(input_ll, output_ll, 'left') + one_eye_to(input_fr, output_fr, 'right')
+
+def eye_concated_to_full(input_full, input_concated, output_concated, FLAGS):
+  input_ll, input_fr = tf.split(input_concated, 2)
+  output_ll, output_fr = tf.split(output_concated, 2)
+  return eye_to_full(input_full, input_ll, input_fr, output_ll, output_fr, FLAGS)
 
 def summary_batch(names, locals, prefix):
   for name in names:
