@@ -49,15 +49,21 @@ def eye_concated_to_full(input_full, input_concated, output_concated, FLAGS):
   output_ll, output_fr = tf.split(output_concated, 2)
   return eye_to_full(input_full, input_ll, input_fr, output_ll, output_fr, FLAGS)
 
+def summary_scalar(name, var, if_none_then_ignore=True):
+  if var is not None:
+    tf.summary.scalar(name, var)
+  else:
+    print('Ignore summary {} because it is None'.format(name))
+
 def summary_batch(names, locals, prefix):
   for name in names:
     summary_float_image('{}/{}'.format(prefix, name), locals[name])
 
-def summary_float_image(name, image, summary_histogram=True, summary_image=True):
+def summary_float_image(name, image, summary_histogram=True, summary_image=True, collections=['summaries_secondary']):
   if summary_image:
-    tf.summary.image(name, batch_convert2int(image), max_outputs=1)
+    tf.summary.image(name, batch_convert2int(image), max_outputs=1, collections=collections)
   if summary_histogram:
-    tf.summary.histogram(name, image)
+    tf.summary.histogram(name, image, collections=collections)
 
 def convert2int(image):
   """ Transfrom from float tensor ([-1.,1.]) to int image ([0,255])

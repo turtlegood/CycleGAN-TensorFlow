@@ -91,7 +91,9 @@ def train():
         G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss)
 
     summary_op = tf.summary.merge_all()
-    train_writer = tf.summary.FileWriter(checkpoints_dir, graph)
+    secondary_summary_op = tf.summary.merge_all(key='summaries_secondary')
+    train_writer = tf.summary.FileWriter(checkpoints_dir + '/main', graph)
+    train_secondary_writer = tf.summary.FileWriter(checkpoints_dir + '/secondary', graph)
     saver = tf.train.Saver(max_to_keep=100) # XXX
 
   with tf.Session(graph=graph) as sess:
@@ -117,9 +119,9 @@ def train():
         fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
 
         # train
-        _, G_loss_val, D_Y_loss_val, F_loss_val, D_X_loss_val, summary = (
+        _, summary, secondary_summary = (
               sess.run(
-                  [optimizers, G_loss, D_Y_loss, F_loss, D_X_loss, summary_op],
+                  [optimizers, summary_op, secondary_summary_op],
                   feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val),
                              cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
               )
@@ -128,13 +130,11 @@ def train():
         if step < 500 or step % 10 == 0:
           train_writer.add_summary(summary, step)
           train_writer.flush()
+          train_secondary_writer.add_summary(secondary_summary, step)
+          train_secondary_writer.flush()
 
-        if step % 100 == 0:
-          logging.info('-----------Step %d:-------------' % step)
-          logging.info('  G_loss   : {}'.format(G_loss_val))
-          logging.info('  D_Y_loss : {}'.format(D_Y_loss_val))
-          logging.info('  F_loss   : {}'.format(F_loss_val))
-          logging.info('  D_X_loss : {}'.format(D_X_loss_val))
+        if step % 50 == 0:
+          logging.info('Step: %d' % step)
 
         if step % 10000 == 0:
           save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)

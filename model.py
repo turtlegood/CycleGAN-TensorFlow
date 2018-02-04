@@ -102,27 +102,33 @@ class CycleGAN:
     D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated, use_lsgan=self.use_lsgan)
 
     # face_loss
-    G_face_loss, F_face_loss = facenet_loss.facenet_loss(
-        tf.concat([x_full, fake_y_full, y_full, fake_x_full], 0), concat_size=2, FLAGS=self.FLAGS)
+    if self.FLAGS.lambda_face == 0:
+      G_face_loss = F_face_loss = None
+    else:
+      G_face_loss, F_face_loss = facenet_loss.facenet_loss(
+          tf.concat([x_full, fake_y_full, y_full, fake_x_full], 0), concat_size=2, FLAGS=self.FLAGS)
     
     # pix loss
-    G_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_y_full - x_full, 2)
-    F_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_x_full - y_full, 2)
+    if self.FLAGS.lambda_pix == 0:
+      G_pix_loss = F_pix_loss = None
+    else:
+      G_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_y_full - x_full, 1)
+      F_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_x_full - y_full, 1)
 
     ### summaries ###
 
     # utils.summary_batch(names=['fake_x_full', 'fake_y_full'], locals=locals(), prefix='dbg')
     # utils.summary_float_image('dbg/delta_fake_y_and_x', fake_y_full - x_full)
 
-    tf.summary.scalar('loss_ll/G', G_gan_loss)
-    tf.summary.scalar('loss_ll/D_Y', D_Y_loss)
-    tf.summary.scalar('loss_ll/F', F_gan_loss)
-    tf.summary.scalar('loss_ll/D_X', D_X_loss)
-    tf.summary.scalar('loss_ll/cycle', cycle_loss)
-    tf.summary.scalar('loss/G_face', G_face_loss)
-    tf.summary.scalar('loss/F_face', F_face_loss)
-    tf.summary.scalar('loss/G_pix', G_pix_loss)
-    tf.summary.scalar('loss/F_pix', F_pix_loss)
+    utils.summary_scalar('loss/G', G_gan_loss)
+    utils.summary_scalar('loss/D_Y', D_Y_loss)
+    utils.summary_scalar('loss/F', F_gan_loss)
+    utils.summary_scalar('loss/D_X', D_X_loss)
+    utils.summary_scalar('loss/cycle', cycle_loss)
+    utils.summary_scalar('loss/G_face', G_face_loss)
+    utils.summary_scalar('loss/F_face', F_face_loss)
+    utils.summary_scalar('loss/G_pix', G_pix_loss)
+    utils.summary_scalar('loss/F_pix', F_pix_loss)
 
     # tf.summary.histogram('D_Y/true', self.D_Y(y))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
@@ -148,32 +154,37 @@ class CycleGAN:
   
   def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss):
     def make_optimizer(loss, variables, lr, name='Adam'):
-      """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
-          and a linearly decaying rate that goes to zero over the next 100k steps
-      """
-      global_step = tf.Variable(0, trainable=False)
-      starter_learning_rate = lr
-      end_learning_rate = 0.0
-      start_decay_step = 100000
-      decay_steps = 100000
-      beta1 = self.beta1
-      learning_rate = (
-          tf.where(
-                  tf.greater_equal(global_step, start_decay_step),
-                  tf.train.polynomial_decay(starter_learning_rate, global_step-start_decay_step,
-                                            decay_steps, end_learning_rate,
-                                            power=1.0),
-                  starter_learning_rate
-          )
-
-      )
-      tf.summary.scalar('learning_rate/{}'.format(name), learning_rate)
-
-      learning_step = (
-          tf.train.AdamOptimizer(learning_rate, beta1=beta1, name=name)
-                  .minimize(loss, global_step=global_step, var_list=variables)
-      )
-      return learning_step
+      if loss is None:
+        print('Ignore loss {} because it is None'.format(name))
+      else:
+        """ Adam optimizer with learning rate 0.0002 for the first 100k steps (~100 epochs)
+            and a linearly decaying rate that goes to zero over the next 100k steps
+        """
+        global_step = tf.Variable(0, trainable=False)
+        # starter_learning_rate = lr
+        # end_learning_rate = 0.0
+        # start_decay_step = 100000
+        # decay_steps = 100000
+        beta1 = self.beta1
+        # learning_rate = (
+        #     tf.where(
+        #             tf.greater_equal(global_step, start_decay_step),
+        #             tf.train.polynomial_decay(starter_learning_rate, global_step-start_decay_step,
+        #                                       decay_steps, end_learning_rate,
+        #                                       power=1.0),
+        #             starter_learning_rate
+        #     )
+        # )
+        # tf.summary.scalar('learning_rate/{}'.format(name), learning_rate)
+        # learning_step = (
+        #     tf.train.AdamOptimizer(learning_rate, beta1=beta1, name=name)
+        #             .minimize(loss, global_step=global_step, var_list=variables)
+        # )
+        learning_step = (
+            tf.train.AdamOptimizer(lr, beta1=beta1, name=name)
+                    .minimize(loss, global_step=global_step, var_list=variables)
+        )
+        return learning_step
 
     G_optimizer = make_optimizer(G_loss, self.G.variables, self.FLAGS.lr_G, name='Adam_G')
     D_Y_optimizer = make_optimizer(D_Y_loss, self.D_Y.variables, self.FLAGS.lr_D, name='Adam_D_Y')
@@ -184,7 +195,8 @@ class CycleGAN:
     G_pix_optimizer = make_optimizer(G_pix_loss, self.G.variables, self.FLAGS.lr_pix, name='Adam_G_pix')
     F_pix_optimizer = make_optimizer(F_pix_loss, self.F.variables, self.FLAGS.lr_pix, name='Adam_F_pix')
 
-    with tf.control_dependencies([G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer, G_face_optimizer, F_face_optimizer, G_pix_optimizer, F_pix_optimizer]):
+    nonempty_optimizers = list(filter(None, [G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer, G_face_optimizer, F_face_optimizer, G_pix_optimizer, F_pix_optimizer]))
+    with tf.control_dependencies(nonempty_optimizers):
       return tf.no_op(name='optimizers')
 
   def discriminator_loss(self, D, y, fake_y, use_lsgan=True):
