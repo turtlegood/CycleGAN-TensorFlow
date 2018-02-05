@@ -12,24 +12,19 @@ import os
 from tensorflow.python.tools.freeze_graph import freeze_graph
 from model import CycleGAN
 import utils
-
-FLAGS = tf.flags.FLAGS
+from ast import literal_eval
 
 tf.flags.DEFINE_string('name', '', '')
-tf.flags.DEFINE_integer('full_image_size', 256, '')
-tf.flags.DEFINE_integer('eye_image_size', 256, '')
-tf.flags.DEFINE_string('face_model_path', '', '')
-tf.flags.DEFINE_integer('eye_y', '', '')
-tf.flags.DEFINE_integer('ngf', 64,
-                        'number of gen filters in first conv layer, default: 64')
-tf.flags.DEFINE_string('norm', 'instance',
-                       '[instance, batch] use instance norm or batch norm, default: instance')
-tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
-tf.flags.DEFINE_float('lambda_face', 1.0, '')
 
 # def export_graph(model_name, XtoY=True):
 def export_graph(XtoY):
   graph = tf.Graph()
+
+  checkpoint_dir = 'checkpoints/' + tf.flags.FLAGS.name
+  with open(checkpoint_dir + '/FLAGS.txt') as f:
+    FLAGS = utils.Map(literal_eval(f.read()))
+
+  print('loaded FLAGS: {}'.format(FLAGS))
 
   with graph.as_default():
     cycle_gan = CycleGAN(
@@ -58,11 +53,10 @@ def export_graph(XtoY):
   with tf.Session(graph=graph) as sess:
     sess.run(tf.global_variables_initializer())
     # latest_ckpt = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
-    checkpoint_dir = 'checkpoints/' + FLAGS.name
     all_ckpt_list = tf.train.get_checkpoint_state(checkpoint_dir).all_model_checkpoint_paths
     for ckpt in all_ckpt_list:
       print('exporting ckpt=%s'%ckpt)
-      model_dir = 'pretrained/' + FLAGS.name
+      model_dir = 'pretrained/' + tf.flags.FLAGS.name
       model_name = os.path.basename(ckpt) + '.pb'
       restore_saver.restore(sess, ckpt)
       output_graph_def = tf.graph_util.convert_variables_to_constants(

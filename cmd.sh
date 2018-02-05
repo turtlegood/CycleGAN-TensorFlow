@@ -6,7 +6,7 @@ common_arg="\
         --eye_y 70 \
         --lambda1 10 \
         --lambda2 10 \
-        --lambda_face 1e-2 \
+        --lambda_face 1e-4 \
         --lambda_pix 0 \
         --lambda_gan 1 \
         --use_G_skip_conn False \
@@ -96,13 +96,12 @@ export )
     else 
         chkpt=$(chkpt_from_idx $2 $3)
         echo 'chkpt' $chkpt
-        python3 export_graph.py \
-            --name "$chkpt" \
-            $common_arg
+        python3 export_graph.py --name "$chkpt"
     fi
     ;;
 inference | infer )
-    chkpt=$(chkpt_from_idx $2 $3)
+    # chkpt=$(chkpt_from_idx $2 $3)
+    chkpt=$2
     echo 'chkpt' $chkpt
     python3 inference.py \
         --model_dir pretrained/$chkpt \

@@ -8,46 +8,39 @@ from utils import ImagePool
 
 FLAGS = tf.flags.FLAGS
 
-tf.flags.DEFINE_bool('formal', False, '')
-tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_y', 0, '')
+
 tf.flags.DEFINE_bool('use_faceloss_prewhitten', False, '')
 tf.flags.DEFINE_bool('use_G_skip_conn', False, '')
 tf.flags.DEFINE_bool('use_G_resi', False, '')
-tf.flags.DEFINE_bool('use_lsgan', True,
-                     'use lsgan (mean squared error) or cross entropy loss, default: True')
-tf.flags.DEFINE_string('norm', 'instance',
-                       '[instance, batch] use instance norm or batch norm, default: instance')
-tf.flags.DEFINE_integer('lambda1', 10.0,
-                        'weight for forward cycle loss (X->Y->X), default: 10.0')
-tf.flags.DEFINE_integer('lambda2', 10.0,
-                        'weight for backward cycle loss (Y->X->Y), default: 10.0')
+
+tf.flags.DEFINE_bool('formal', False, '')
+tf.flags.DEFINE_integer('batch_size', 1, 'batch size, default: 1')
+tf.flags.DEFINE_bool('use_lsgan', True, 'use lsgan (mean squared error) or cross entropy loss, default: True')
+
+tf.flags.DEFINE_integer('lambda1', 10.0, 'weight for forward cycle loss (X->Y->X), default: 10.0')
+tf.flags.DEFINE_integer('lambda2', 10.0, 'weight for backward cycle loss (Y->X->Y), default: 10.0')
 tf.flags.DEFINE_float('lambda_face', 1.0, '')
 tf.flags.DEFINE_float('lambda_pix', 1.0, '')
 tf.flags.DEFINE_float('lambda_gan', 1.0, '')
+
 tf.flags.DEFINE_float('lr_G', -1, '')
 tf.flags.DEFINE_float('lr_D', -1, '')
 tf.flags.DEFINE_float('lr_face', -1, '')
 tf.flags.DEFINE_float('lr_pix', -1, '')
-tf.flags.DEFINE_float('beta1', 0.5,
-                      'momentum term of Adam, default: 0.5')
-tf.flags.DEFINE_float('pool_size', 50,
-                      'size of image buffer that stores previously generated images, default: 50')
-tf.flags.DEFINE_integer('ngf', 64,
-                        'number of gen filters in first conv layer, default: 64')
 
-tf.flags.DEFINE_string('X', 'data/tfrecords/apple.tfrecords',
-                       'X tfrecords file for training, default: data/tfrecords/apple.tfrecords')
-tf.flags.DEFINE_string('Y', 'data/tfrecords/orange.tfrecords',
-                       'Y tfrecords file for training, default: data/tfrecords/orange.tfrecords')
-tf.flags.DEFINE_string('load_model', None,
-                        'folder of saved model that you wish to continue training (e.g. 20170602-1936), default: None')
-tf.flags.DEFINE_string('train_name', None,
-                        'the custom name of the training which will be shown in the folder name, default: None')
+tf.flags.DEFINE_integer('ngf', 64, 'number of gen filters in first conv layer, default: 64')
+tf.flags.DEFINE_string('norm', 'instance', '[instance, batch] use instance norm or batch norm, default: instance')
+tf.flags.DEFINE_float('beta1', 0.5, 'momentum term of Adam, default: 0.5')
+tf.flags.DEFINE_float('pool_size', 50, 'size of image buffer that stores previously generated images, default: 50')
 
+tf.flags.DEFINE_string('X', 'data/tfrecords/apple.tfrecords', 'X tfrecords file for training, default: data/tfrecords/apple.tfrecords')
+tf.flags.DEFINE_string('Y', 'data/tfrecords/orange.tfrecords', 'Y tfrecords file for training, default: data/tfrecords/orange.tfrecords')
+tf.flags.DEFINE_string('load_model', None, 'folder of saved model that you wish to continue training (e.g. 20170602-1936), default: None')
+tf.flags.DEFINE_string('train_name', None, 'the custom name of the training which will be shown in the folder name, default: None')
 
 def train():
   checkpoints_dir_prefix = 'checkpoints/' if FLAGS.formal else 'checkpoints_informal/'
