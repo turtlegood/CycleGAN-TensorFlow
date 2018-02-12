@@ -93,42 +93,46 @@ class CycleGAN:
 
     # X -> Y
     G_gan_loss = self.generator_loss(self.D_Y, fake_y_concated, use_lsgan=self.use_lsgan)
-    G_loss =  G_gan_loss + cycle_loss
     D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated, use_lsgan=self.use_lsgan)
 
     # Y -> X
     F_gan_loss = self.generator_loss(self.D_X, fake_x_concated, use_lsgan=self.use_lsgan)
-    F_loss = F_gan_loss + cycle_loss
     D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated, use_lsgan=self.use_lsgan)
 
     # face_loss
     if self.FLAGS.lambda_face == 0:
-      G_face_loss = F_face_loss = None
+      G_face_loss = F_face_loss = 0
     else:
       G_face_loss, F_face_loss = facenet_loss.facenet_loss(
           tf.concat([x_full, fake_y_full, y_full, fake_x_full], 0), concat_size=2, FLAGS=self.FLAGS)
     
     # pix loss
     if self.FLAGS.lambda_pix == 0:
-      G_pix_loss = F_pix_loss = None
+      G_pix_loss = F_pix_loss = 0
     else:
       G_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_y_full - x_full, 1)
       F_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_x_full - y_full, 1)
+    
+    # total loss
+    G_loss = G_gan_loss + cycle_loss + self.FLAGS.lambda_face * G_face_loss + self.FLAGS.lambda_pix * G_pix_loss
+    F_loss = F_gan_loss + cycle_loss + self.FLAGS.lambda_face * F_face_loss + self.FLAGS.lambda_pix * F_pix_loss
 
     ### summaries ###
 
     # utils.summary_batch(names=['fake_x_full', 'fake_y_full'], locals=locals(), prefix='dbg')
     # utils.summary_float_image('dbg/delta_fake_y_and_x', fake_y_full - x_full)
 
-    utils.summary_scalar('loss/G', G_gan_loss)
+    utils.summary_scalar('loss/G_gan', G_gan_loss)
     utils.summary_scalar('loss/D_Y', D_Y_loss)
-    utils.summary_scalar('loss/F', F_gan_loss)
+    utils.summary_scalar('loss/F_gan', F_gan_loss)
     utils.summary_scalar('loss/D_X', D_X_loss)
     utils.summary_scalar('loss/cycle', cycle_loss)
     utils.summary_scalar('loss/G_face', G_face_loss)
     utils.summary_scalar('loss/F_face', F_face_loss)
     utils.summary_scalar('loss/G_pix', G_pix_loss)
     utils.summary_scalar('loss/F_pix', F_pix_loss)
+    utils.summary_scalar('loss/G_sum', G_loss)
+    utils.summary_scalar('loss/F_sum', F_loss)
 
     # tf.summary.histogram('D_Y/true', self.D_Y(y))
     # tf.summary.histogram('D_Y/fake', self.D_Y(self.G(x)))
@@ -151,10 +155,9 @@ class CycleGAN:
     utils.summary_float_image('X_concated/4_residual', fake_y_concated - x_concated)
     utils.summary_float_image('Y_concated/4_residual', fake_x_concated - y_concated)
 
-    return  (G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss), \
-            (fake_y_full, fake_x_full)
+    return  (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y_full, fake_x_full)
   
-  def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss, G_face_loss, F_face_loss, G_pix_loss, F_pix_loss):
+  def optimize(self, G_loss, D_Y_loss, F_loss, D_X_loss):
     def make_optimizer(loss, variables, lr, name='Adam'):
       if loss is None:
         print('Ignore loss {} because it is None'.format(name))
@@ -192,12 +195,8 @@ class CycleGAN:
     D_Y_optimizer = make_optimizer(D_Y_loss, self.D_Y.variables, self.FLAGS.lr_D, name='Adam_D_Y')
     F_optimizer =  make_optimizer(F_loss, self.F.variables, self.FLAGS.lr_G, name='Adam_F')
     D_X_optimizer = make_optimizer(D_X_loss, self.D_X.variables, self.FLAGS.lr_D, name='Adam_D_X')
-    G_face_optimizer = make_optimizer(G_face_loss, self.G.variables, self.FLAGS.lr_face, name='Adam_G_face')
-    F_face_optimizer = make_optimizer(F_face_loss, self.F.variables, self.FLAGS.lr_face, name='Adam_F_face')
-    G_pix_optimizer = make_optimizer(G_pix_loss, self.G.variables, self.FLAGS.lr_pix, name='Adam_G_pix')
-    F_pix_optimizer = make_optimizer(F_pix_loss, self.F.variables, self.FLAGS.lr_pix, name='Adam_F_pix')
 
-    nonempty_optimizers = list(filter(None, [G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer, G_face_optimizer, F_face_optimizer, G_pix_optimizer, F_pix_optimizer]))
+    nonempty_optimizers = list(filter(None, [G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer]))
     with tf.control_dependencies(nonempty_optimizers):
       return tf.no_op(name='optimizers')
 

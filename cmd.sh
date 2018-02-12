@@ -6,16 +6,14 @@ common_arg="\
         --eye_y 70 \
         --lambda1 10 \
         --lambda2 10 \
-        --lambda_face 1e-4 \
+        --lambda_face 1 \
         --lambda_pix 0 \
         --lambda_gan 1 \
         --use_G_skip_conn False \
         --use_G_resi False \
         --use_face_prewhitten True \
         --lr_G 1e-4 \
-        --lr_D 1e-5 \
-        --lr_face 2e-5 \
-        --lr_pix 2e-5"
+        --lr_D 1e-5"
 
 # $1 => default value; $2 => value
 function chkpt_dir_prefix {
