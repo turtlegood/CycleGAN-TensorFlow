@@ -89,6 +89,10 @@ train )
         $addition"
     echo "cmd" $cmd; $cmd
     ;;
+export_identity )
+    # also need a name for faking... :|
+    python3 export_graph.py --export_identity=True --name=20180212-0754
+    ;;
 export )
     if test "$#" -ne 2;
     then
@@ -101,13 +105,13 @@ export )
     ;;
 inference | infer )
     # chkpt=$(chkpt_from_idx $2 $3)
-    chkpt=$2
-    echo 'chkpt' $chkpt
     python3 inference.py \
-        --model_dir pretrained/$chkpt \
+        --model_base_dir pretrained \
         --input_dir test/input \
-        --output_dir test/$chkpt \
-        --full_image_size $full_image_size
+        --output_dir test/output \
+        --full_image_size $full_image_size \
+        --checkpoint_arr $2 \
+        --step_arr $3 \
     ;;
 log )
     chkpt=$(chkpt_from_idx $2 $3)

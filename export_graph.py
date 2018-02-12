@@ -15,9 +15,10 @@ import utils
 from ast import literal_eval
 
 tf.flags.DEFINE_string('name', '', '')
+tf.flags.DEFINE_bool('export_identity', False, '')
 
 # def export_graph(model_name, XtoY=True):
-def export_graph(XtoY):
+def export_graph(XtoY, export_identity):
   graph = tf.Graph()
 
   checkpoint_dir = 'checkpoints/' + tf.flags.FLAGS.name
@@ -41,7 +42,10 @@ def export_graph(XtoY):
 
     input_expanded = tf.expand_dims(input_image, 0)
     input_ll, input_fr = utils.full_to_eye(input_expanded, FLAGS)
-    output_ll, output_fr = cycle_gan.G(input_ll), cycle_gan.G(input_fr)
+    if export_identity:
+      output_ll, output_fr = input_ll, input_fr
+    else:
+      output_ll, output_fr = cycle_gan.G(input_ll), cycle_gan.G(input_fr)
     output_full = utils.eye_to_full(input_expanded, input_ll, input_fr, output_ll, output_fr, FLAGS)
     output_int = utils.batch_convert2int(output_full)
     output_image = tf.image.encode_jpeg(tf.squeeze(output_int, [0]))
@@ -54,17 +58,25 @@ def export_graph(XtoY):
     sess.run(tf.global_variables_initializer())
     # latest_ckpt = tf.train.latest_checkpoint(FLAGS.checkpoint_dir)
     all_ckpt_list = tf.train.get_checkpoint_state(checkpoint_dir).all_model_checkpoint_paths
-    for ckpt in all_ckpt_list:
-      print('exporting ckpt=%s'%ckpt)
-      model_dir = 'pretrained/' + tf.flags.FLAGS.name
-      model_name = os.path.basename(ckpt) + '.pb'
-      restore_saver.restore(sess, ckpt)
+    if export_identity:
+      print('exporting identity')
+      model_dir = 'pretrained'
+      model_name = 'identity.pb'
       output_graph_def = tf.graph_util.convert_variables_to_constants(
           sess, graph.as_graph_def(), [output_image.op.name])
       tf.train.write_graph(output_graph_def, model_dir, model_name, as_text=False)
+    else:
+      for ckpt in all_ckpt_list:
+        print('exporting ckpt=%s'%ckpt)
+        model_dir = 'pretrained/' + tf.flags.FLAGS.name
+        model_name = os.path.basename(ckpt) + '.pb'
+        restore_saver.restore(sess, ckpt)
+        output_graph_def = tf.graph_util.convert_variables_to_constants(
+            sess, graph.as_graph_def(), [output_image.op.name])
+        tf.train.write_graph(output_graph_def, model_dir, model_name, as_text=False)
   
 def main(unused_argv):
-  export_graph(XtoY=True)
+  export_graph(XtoY=True, export_identity=tf.flags.FLAGS.export_identity)
   # print('Export XtoY model...')
   # export_graph(FLAGS.XtoY_model, XtoY=True)
   # print('Does not export YtoX model')
