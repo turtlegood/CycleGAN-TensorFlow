@@ -114,8 +114,11 @@ class CycleGAN:
       F_pix_loss = self.FLAGS.lambda_pix * tf.norm(fake_x_full - y_full, 1)
     
     # total loss
-    G_loss = G_gan_loss + cycle_loss + self.FLAGS.lambda_face * G_face_loss + self.FLAGS.lambda_pix * G_pix_loss
-    F_loss = F_gan_loss + cycle_loss + self.FLAGS.lambda_face * F_face_loss + self.FLAGS.lambda_pix * F_pix_loss
+    # XXX WRONG AND WRONG! all of the lambdas are multiplied TWICE!
+    # G_loss = G_gan_loss + cycle_loss + self.FLAGS.lambda_face * G_face_loss + self.FLAGS.lambda_pix * G_pix_loss
+    # F_loss = F_gan_loss + cycle_loss + self.FLAGS.lambda_face * F_face_loss + self.FLAGS.lambda_pix * F_pix_loss
+    G_loss = G_gan_loss + cycle_loss + G_face_loss + G_pix_loss
+    F_loss = F_gan_loss + cycle_loss + F_face_loss + F_pix_loss
 
     ### summaries ###
 
