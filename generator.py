@@ -57,8 +57,12 @@ class Generator:
       # but actually tanh was used and no _norm here
       # XXX: Try to do a residual thing :/
       if self.FLAGS.use_G_resi:
-        output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
-            activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
+        if self.FLAGS.use_G_new_tanh:
+          output = input + tf.nn.tanh(ops.c7s1_k(u32, 3, norm=None,
+              activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
+        else:
+          output = tf.nn.tanh(input + ops.c7s1_k(u32, 3, norm=None,
+              activation=None, reuse=self.reuse, name='output'))           # (?, w, h, 3)
       else:
         output = ops.c7s1_k(u32, 3, norm=None,
             activation='tanh', reuse=self.reuse, name='output')           # (?, w, h, 3)

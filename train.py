@@ -8,6 +8,8 @@ from utils import ImagePool
 
 FLAGS = tf.flags.FLAGS
 
+tf.flags.DEFINE_bool('use_G_new_tanh', False, '')
+
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
 tf.flags.DEFINE_integer('eye_image_size', 0, '')

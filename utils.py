@@ -102,7 +102,8 @@ def summary_float_image(name, image, summary_histogram=True, \
 def convert2int(image):
   """ Transfrom from float tensor ([-1.,1.]) to int image ([0,255])
   """
-  return tf.image.convert_image_dtype((image+1.0)/2.0, tf.uint8)
+  # https://www.tensorflow.org/api_docs/python/tf/image/convert_image_dtype
+  return tf.image.convert_image_dtype((image+1.0)/2.0, tf.uint8, saturate=True)
 
 def convert2float(image):
   """ Transfrom from int image ([0,255]) to float tensor ([-1.,1.])

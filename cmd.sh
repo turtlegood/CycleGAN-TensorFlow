@@ -6,11 +6,12 @@ common_arg="\
         --eye_y 70 \
         --lambda1 10 \
         --lambda2 10 \
-        --lambda_face 1 \
-        --lambda_pix 0 \
+        --lambda_face 0 \
+        --lambda_pix 1e-3 \
         --lambda_gan 1 \
         --use_G_skip_conn False \
-        --use_G_resi False \
+        --use_G_resi True \
+        --use_G_new_tanh True \
         --use_face_prewhitten True \
         --lr_G 1e-4 \
         --lr_D 1e-5"
@@ -63,6 +64,16 @@ build_data )
         --X_output_file /home/rail/TomChen/Others/CelebaData/has.tfrecords \
         --Y_output_file /home/rail/TomChen/Others/CelebaData/not.tfrecords
     ;;
+# swap )
+#     cmd="python3 train.py \
+#         --X /home/rail/TomChen/Others/CelebaData/has.tfrecords \
+#         --Y /home/rail/TomChen/Others/CelebaData/not.tfrecords \
+#         --batch_size 1 \
+#         $common_arg \
+#         --formal True \
+# 	--load_model 20180214-0800"
+#     echo "cmd" $cmd; $cmd
+# ;;
 train )
     if test "$#" -ne 2;
     then
