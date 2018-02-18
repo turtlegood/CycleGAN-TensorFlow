@@ -9,10 +9,12 @@ common_arg="\
         --lambda_face 0 \
         --lambda_pix 1e-3 \
         --lambda_gan 1 \
+        --lambda_gp 10.0 \
         --use_G_skip_conn False \
         --use_G_resi True \
         --use_G_new_tanh True \
         --use_face_prewhitten True \
+        --use_wgan_gp True \
         --lr_G 1e-4 \
         --lr_D 1e-5"
 

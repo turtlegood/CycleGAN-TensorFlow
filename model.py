@@ -92,12 +92,12 @@ class CycleGAN:
     cycle_loss = self.cycle_consistency_loss(x_concated, y_concated, cycle_x_concated, cycle_y_concated)
 
     # X -> Y
-    G_gan_loss = self.generator_loss(self.D_Y, fake_y_concated, use_lsgan=self.use_lsgan)
-    D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated, use_lsgan=self.use_lsgan)
+    G_gan_loss = self.generator_loss(self.D_Y, fake_y_concated)
+    D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated)
 
     # Y -> X
-    F_gan_loss = self.generator_loss(self.D_X, fake_x_concated, use_lsgan=self.use_lsgan)
-    D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated, use_lsgan=self.use_lsgan)
+    F_gan_loss = self.generator_loss(self.D_X, fake_x_concated)
+    D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated)
 
     # face_loss
     if self.FLAGS.lambda_face == 0:
@@ -199,11 +199,13 @@ class CycleGAN:
     F_optimizer =  make_optimizer(F_loss, self.F.variables, self.FLAGS.lr_G, name='Adam_F')
     D_X_optimizer = make_optimizer(D_X_loss, self.D_X.variables, self.FLAGS.lr_D, name='Adam_D_X')
 
-    nonempty_optimizers = list(filter(None, [G_optimizer, D_Y_optimizer, F_optimizer, D_X_optimizer]))
-    with tf.control_dependencies(nonempty_optimizers):
-      return tf.no_op(name='optimizers')
+    with tf.control_dependencies([G_optimizer, F_optimizer]):
+      generator_optimizers = tf.no_op(name='optimizers')
+    with tf.control_dependencies([D_Y_optimizer, D_X_optimizer]):
+      discriminator_optimizers = tf.no_op(name='optimizers')
+    return (generator_optimizers, discriminator_optimizers)
 
-  def discriminator_loss(self, D, y, fake_y, use_lsgan=True):
+  def discriminator_loss(self, D, y, fake_y):
     """ Note: default: D(y).shape == (batch_size,5,5,1),
                        fake_buffer_size=50, batch_size=1
     Args:
@@ -213,21 +215,43 @@ class CycleGAN:
     Returns:
       loss: scalar
     """
-    if use_lsgan:
+    if self.FLAGS.use_wgan_gp:
+      error_real = -1.0 * tf.reduce_mean(D(y))
+      error_fake = tf.reduce_mean(D(fake_y))
+
+      alpha = tf.random_uniform(shape=[self.FLAGS.batch_size, 1, 1, 1], minval=0.,maxval=1.)
+      y_hat = alpha * y + (1.0-alpha) * fake_y
+
+      # TODO: this [0] ?
+      # TODO: [1,2,3] ?
+      # TODO: debug this 
+      loss_gp = tf.reduce_mean(
+              ( tf.sqrt(tf.reduce_sum(
+                    tf.gradients(D(y_hat), y_hat)[0] **2, reduction_indices=[1,2,3]
+                ))
+              - 1.0) **2
+            )
+
+      #TODO:
+      loss = error_real + error_fake + self.FLAGS.lambda_gp * loss_gp
+    elif self.use_lsgan:
       # use mean squared error
       error_real = tf.reduce_mean(tf.squared_difference(D(y), REAL_LABEL))
       error_fake = tf.reduce_mean(tf.square(D(fake_y)))
+      loss = (error_real + error_fake) / 2
     else:
       # use cross entropy
       error_real = -tf.reduce_mean(ops.safe_log(D(y)))
       error_fake = -tf.reduce_mean(ops.safe_log(1-D(fake_y)))
-    loss = (error_real + error_fake) / 2
+      loss = (error_real + error_fake) / 2
     return loss
 
-  def generator_loss(self, D, fake_y, use_lsgan=True):
+  def generator_loss(self, D, fake_y):
     """  fool discriminator into believing that G(x) is real
     """
-    if use_lsgan:
+    if self.FLAGS.use_wgan_gp:
+      loss = -1.0 * tf.reduce_mean(D(fake_y))
+    elif self.use_lsgan:
       # use mean squared error
       loss = tf.reduce_mean(tf.squared_difference(D(fake_y), REAL_LABEL))
     else:

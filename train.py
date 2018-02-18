@@ -9,6 +9,9 @@ from utils import ImagePool
 FLAGS = tf.flags.FLAGS
 
 tf.flags.DEFINE_bool('use_G_new_tanh', False, '')
+tf.flags.DEFINE_bool('use_wgan_gp', False, '')
+tf.flags.DEFINE_integer('num_critic_train', 5, '')
+tf.flags.DEFINE_float('lambda_gp', 10.0, '')
 
 tf.flags.DEFINE_string('face_model_path', '', '')
 tf.flags.DEFINE_integer('full_image_size', 0, '')
@@ -82,7 +85,7 @@ def train():
         ngf=FLAGS.ngf
     )
     (G_loss, D_Y_loss, F_loss, D_X_loss), (fake_y, fake_x) = cycle_gan.model()
-    optimizers = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
+    (generator_optimizers, discriminator_optimizers) = cycle_gan.optimize(G_loss, D_Y_loss, F_loss, D_X_loss)
 
     summary_op = tf.summary.merge_all()
     secondary_summary_op = tf.summary.merge_all(key='summaries_secondary')
@@ -109,15 +112,18 @@ def train():
       fake_X_pool = ImagePool(FLAGS.pool_size)
 
       while not coord.should_stop():
-        # get previously generated images
-        fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
-
-        # train
+        # train D
+        for _ in range(tf.FLAGS.num_critic_train) :
+          # get previously generated images
+          fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
+          _ = sess.run([discriminator_optimizers],
+                feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val),
+                            cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
+        # train G
         _, summary, secondary_summary = (
               sess.run(
-                  [optimizers, summary_op, secondary_summary_op],
-                  feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val),
-                             cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
+                  [generator_optimizers, summary_op, secondary_summary_op],
+                  feed_dict={}
               )
         )
 
