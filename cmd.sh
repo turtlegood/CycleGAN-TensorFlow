@@ -1,4 +1,24 @@
 full_image_size=160
+# common_arg="\
+#         --face_model_path /home/rail/TomChen/Others/CelebaData/facenet_ms.pb \
+#         --full_image_size $full_image_size \
+#         --eye_image_size 48 \
+#         --eye_y 70 \
+#         --lambda1 0 \
+#         --lambda2 0 \
+#         --lambda_face 0 \
+#         --lambda_pix 0 \
+#         --lambda_gan 1 \
+#         --lambda_gp 10 \
+#         --use_G_skip_conn False \
+#         --use_G_resi True \
+#         --use_G_new_tanh False \
+#         --use_face_prewhitten True \
+#         --use_wgan_gp True \
+#         --num_critic_train 1 \
+#         --batch_size 8 \
+#         --lr_G 1e-4 \
+#         --lr_D 1e-5"
 common_arg="\
         --face_model_path /home/rail/TomChen/Others/CelebaData/facenet_ms.pb \
         --full_image_size $full_image_size \
@@ -7,14 +27,15 @@ common_arg="\
         --lambda1 10 \
         --lambda2 10 \
         --lambda_face 0 \
-        --lambda_pix 1e-3 \
+        --lambda_pix 0 \
         --lambda_gan 1 \
-        --lambda_gp 10.0 \
+        --lambda_gp 10 \
         --use_G_skip_conn False \
         --use_G_resi True \
-        --use_G_new_tanh True \
+        --use_G_new_tanh False \
         --use_face_prewhitten True \
         --use_wgan_gp True \
+        --batch_size 1 \
         --lr_G 1e-4 \
         --lr_D 1e-5"
 

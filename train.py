@@ -112,19 +112,26 @@ def train():
       fake_X_pool = ImagePool(FLAGS.pool_size)
 
       while not coord.should_stop():
+
         # train D
-        for _ in range(tf.FLAGS.num_critic_train) :
+        for _ in range(FLAGS.num_critic_train):
           # get previously generated images
           fake_y_val, fake_x_val = sess.run([fake_y, fake_x])
-          _ = sess.run([discriminator_optimizers],
-                feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val),
+          _ = sess.run([discriminator_optimizers], \
+                feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val), \
                             cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
+          )
+        
+        # TODO: batch_size ?
+                            
         # train G
-        _, summary, secondary_summary = (
-              sess.run(
-                  [generator_optimizers, summary_op, secondary_summary_op],
-                  feed_dict={}
-              )
+        # TODO: ??? that feed_dict
+        _, summary, secondary_summary = ( \
+              sess.run( \
+                  [generator_optimizers, summary_op, secondary_summary_op], \
+                  feed_dict={cycle_gan.fake_y_full: fake_Y_pool.query(fake_y_val), \
+                            cycle_gan.fake_x_full: fake_X_pool.query(fake_x_val)}
+              ) \
         )
 
         if step < 500 or step % 10 == 0:
@@ -137,8 +144,11 @@ def train():
           logging.info('Step: %d' % step)
 
         if step % 10000 == 0:
-          save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)
-          logging.info("Model saved in file: %s" % save_path)
+          if FLAGS.formal:
+            save_path = saver.save(sess, checkpoints_dir + "/model.ckpt", global_step=step)
+            logging.info("Model saved in file: %s" % save_path)
+          else:
+            logging.info("Model not saved since it is informal")
 
         step += 1
 

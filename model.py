@@ -91,13 +91,16 @@ class CycleGAN:
 
     cycle_loss = self.cycle_consistency_loss(x_concated, y_concated, cycle_x_concated, cycle_y_concated)
 
+    #TODO: some are average, some are sum - !
+    #TODO: instance norm ?
+
     # X -> Y
     G_gan_loss = self.generator_loss(self.D_Y, fake_y_concated)
-    D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated)
+    D_Y_loss = self.discriminator_loss(self.D_Y, y_concated, self_fake_y_concated, 'D_Y')
 
     # Y -> X
     F_gan_loss = self.generator_loss(self.D_X, fake_x_concated)
-    D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated)
+    D_X_loss = self.discriminator_loss(self.D_X, x_concated, self_fake_x_concated, 'D_X')
 
     # face_loss
     if self.FLAGS.lambda_face == 0:
@@ -205,7 +208,7 @@ class CycleGAN:
       discriminator_optimizers = tf.no_op(name='optimizers')
     return (generator_optimizers, discriminator_optimizers)
 
-  def discriminator_loss(self, D, y, fake_y):
+  def discriminator_loss(self, D, y, fake_y, name):
     """ Note: default: D(y).shape == (batch_size,5,5,1),
                        fake_buffer_size=50, batch_size=1
     Args:
@@ -218,22 +221,26 @@ class CycleGAN:
     if self.FLAGS.use_wgan_gp:
       error_real = -1.0 * tf.reduce_mean(D(y))
       error_fake = tf.reduce_mean(D(fake_y))
+      loss_classical = error_real + error_fake
 
-      alpha = tf.random_uniform(shape=[self.FLAGS.batch_size, 1, 1, 1], minval=0.,maxval=1.)
+      # 2* because it has TWO eyes
+      alpha = tf.random_uniform(shape=[2 * self.FLAGS.batch_size, 1, 1, 1], minval=0.,maxval=1.)
       y_hat = alpha * y + (1.0-alpha) * fake_y
 
       # TODO: this [0] ?
       # TODO: [1,2,3] ?
       # TODO: debug this 
-      loss_gp = tf.reduce_mean(
+      loss_gp = self.FLAGS.lambda_gp * tf.reduce_mean(
               ( tf.sqrt(tf.reduce_sum(
                     tf.gradients(D(y_hat), y_hat)[0] **2, reduction_indices=[1,2,3]
                 ))
               - 1.0) **2
             )
 
-      #TODO:
-      loss = error_real + error_fake + self.FLAGS.lambda_gp * loss_gp
+      utils.summary_scalar('loss/' + name + '_classical', loss_classical)
+      utils.summary_scalar('loss/' + name + '_gp', loss_gp)
+
+      loss = loss_classical + loss_gp
     elif self.use_lsgan:
       # use mean squared error
       error_real = tf.reduce_mean(tf.squared_difference(D(y), REAL_LABEL))
